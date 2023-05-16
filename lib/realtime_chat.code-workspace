@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		},
+		{
+			"path": "../../../ReactJsProjects/RealTimeChatAppWithRooms"
+		},
+		{
+			"path": "../../chat_app"
+		}
+	],
+	"settings": {}
+}
