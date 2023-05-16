@@ -166,7 +166,7 @@ class _MessageListPageState extends State<MessageListPage> {
     final dio = Dio();
     try {
       var response = await dio.post(
-          "https://017a-116-68-198-178.ap.ngrok.io/upload",
+          "http://localhost:3000/upload",
           data: {"image": base64Image, "name": filename});
       await sendMessage(convsController, currentUserId, selectedUserId,
           messageController.text, response.data['url'], socket);
