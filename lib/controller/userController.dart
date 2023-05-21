@@ -29,12 +29,14 @@ class UserController extends GetxController {
       'Accept': 'application/json'
     };
     var response = await dio.post(
-      'http://172.28.240.1:3000/user/add',
+     // 'http://172.28.240.1:3000/user/add',
+      'https://nodejsrealtimechat.onrender.com/user/add',
       data: jsonEncode(<String, String>{
         "chatId": chatId,
         "name": name,
         "email": email,
-        "password": password
+        "password": password,
+        "status": "Online",
       }),
       options: Options(headers: header),
     );
@@ -63,7 +65,8 @@ class UserController extends GetxController {
       'Accept': 'application/json'
     };
     var responce = await dio.get(
-      'http://172.28.240.1:3000/user/get',
+//'http://172.28.240.1:3000/user/get',
+      'https://nodejsrealtimechat.onrender.com/user/get',
       options: Options(headers: header),
     );
     if (responce.statusCode == 200) {
@@ -83,7 +86,8 @@ class UserController extends GetxController {
       'Accept': 'application/json'
     };
     var response = await dio.get(
-      'http://172.28.240.1:3000/user/get',
+      'https://nodejsrealtimechat.onrender.com/user/get',
+   //   'http://172.28.240.1:3000/user/get',
       options: Options(headers: header),
     );
     if (response.statusCode == 200) {
@@ -118,10 +122,12 @@ class UserController extends GetxController {
       'Content-type': 'application/json; charset=utf-8',
       'Accept': 'application/json'
     };
-    var response = await dio.get(
-      "http://172.28.240.1:3000/user/get?email=${userEmail}&password=${userPassword}",
+    var response = await dio.get(//verify User
+      "https://nodejsrealtimechat.onrender.com/user/get?email=${userEmail}&password=${userPassword}",
+ //     "http://172.28.240.1:3000/user/get?email=${userEmail}&password=${userPassword}",
       options: Options(headers: header),
     );
+
     if (response.statusCode == 200) {
       var result = response.data;
       print(response.data);
@@ -131,6 +137,9 @@ class UserController extends GetxController {
         users.add(user);
       }
       if (userController.users.isNotEmpty) {
+
+        socket.emit("new-user-add", {users[0].id, users[0].chatId});
+
         print("Users: " + userController.users.length.toString());
         String userId = userController.users[0].id!;
         userController.updateUserChatId(context, userId, chatId, userController,
@@ -158,7 +167,8 @@ class UserController extends GetxController {
       'Accept': 'application/json'
     };
     var response = await dio.post(
-      'http://172.28.240.1:3000/user/updateChatId',
+     //'http://172.28.240.1:3000/user/updateChatId',
+     'https://nodejsrealtimechat.onrender.com/user/updateChatId',
       data: jsonEncode(<String, String>{
         '_id': id,
         'chatId': chatId,

@@ -5,9 +5,10 @@ class Message {
   String? text;
   List<String>? seenBy;
   String? imageUrl;
+  String? createdAt;
+  String? updatedAt;
 
-  Message(
-      {this.id, this.fromId, this.toId, this.text, this.seenBy, this.imageUrl});
+  Message({this.id, this.fromId, this.toId, this.text, this.seenBy, this.imageUrl, this.createdAt, this.updatedAt});
 
   Message.fromJson(Map<String, dynamic> json) {
     id = json['_id'];
@@ -16,6 +17,8 @@ class Message {
     text = json['text'];
     seenBy = json['seenBy'].cast<String>();
     imageUrl = json['imageUrl'];
+    createdAt = json['createdAt'];
+    updatedAt = json['updatedAt'];
   }
 
   Map<String, dynamic> toJson() {
@@ -26,6 +29,8 @@ class Message {
     data['text'] = this.text;
     data['seenBy'] = this.seenBy;
     data['imageUrl'] = this.imageUrl;
+    data['createdAt'] = this.createdAt;
+    data['updatedAt'] = this.updatedAt;
     return data;
   }
 }

@@ -86,7 +86,7 @@ class _UserWidgetState extends State<UserWidget> {
         toId: "Initial",
         text: "Initial",
         seenBy: seenBy,
-        imageUrl: "https://www.scad.edu/sites/default/files/Letschat.gif"));
+        imageUrl: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTKTSNwcT2YrRQJKGVQHClGtQgp1_x8kLd0Ig&usqp=CAU"));
     widget.users.add(widget.currentUser);
     widget.users.add(widget.selectedUser);
 

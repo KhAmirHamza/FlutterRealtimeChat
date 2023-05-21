@@ -19,14 +19,7 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
-    Socket socket = io(
-        'http://localhost:3000',
-        OptionBuilder()
-            .setTransports(['websocket']) // for Flutter or Dart VM
-            .disableAutoConnect() // disable auto-connection
-            //.setExtraHeaders({'foo': 'bar'}) // optional
-            .build());
-    socket.connect();
+
 
     var userController = Get.put(UserController());
     var convsControler = Get.put(ConversationController());
@@ -37,16 +30,15 @@ class _MyAppState extends State<MyApp> {
           primarySwatch: Colors.blue,
         ),
         home: Scaffold(
-          body: JoinWidget(socket, convsControler, userController),
+          body: JoinWidget( convsControler, userController),
         ));
   }
 }
 
 class JoinWidget extends StatefulWidget {
-  IO.Socket socket;
   ConversationController convsController;
   UserController userController;
-  JoinWidget(this.socket, this.convsController, this.userController,
+  JoinWidget(this.convsController, this.userController,
       {super.key});
 
   @override
@@ -60,57 +52,71 @@ class _JoinWidgetState extends State<JoinWidget> {
 
   @override
   Widget build(BuildContext context) {
+
+
+
+
     return Container(
       child: Column(
         children: [
-          Padding(
-            padding: EdgeInsets.all(15),
-            child: Container(
-              margin: EdgeInsets.only(bottom: 30),
-              child: Text("Realtime Chat",
-                  style: TextStyle(
-                      color: Colors.blueAccent,
-                      fontSize: 30,
-                      fontWeight: FontWeight.bold)),
-            ),
-          ),
-          Padding(
-            padding: EdgeInsets.all(15),
-            child: TextField(
-              controller: nameController,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                labelText: "Name",
-                hintText: "Enter Your Name",
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.all(15),
+              child: Container(
+                margin: EdgeInsets.only(bottom: 30),
+                child: Text("Realtime Chat",
+                    style: TextStyle(
+                        color: Colors.blueAccent,
+                        fontSize: 30,
+                        fontWeight: FontWeight.bold)),
               ),
             ),
           ),
-          Padding(
-            padding: EdgeInsets.all(15),
-            child: TextField(
-              controller: emailController,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                labelText: "Email",
-                hintText: "Enter Your Email Address",
+
+
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.all(15),
+              child: TextField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  labelText: "Name",
+                  hintText: "Enter Your Name",
+                ),
               ),
             ),
           ),
-          Padding(
-            padding: EdgeInsets.all(15),
-            child: TextField(
-              controller: passwordController,
-              obscureText: true,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                labelText: 'Password',
-                hintText: 'Enter Password',
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.all(15),
+              child: TextField(
+                controller: emailController,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  labelText: "Email",
+                  hintText: "Enter Your Email Address",
+                ),
               ),
             ),
           ),
-          MyButton(widget.socket, widget.userController, widget.convsController,
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.all(15),
+              child: TextField(
+                controller: passwordController,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  labelText: 'Password',
+                  hintText: 'Enter Password',
+                ),
+              ),
+            ),
+          ),
+          MyButton(widget.userController, widget.convsController,
               nameController, emailController, passwordController),
-          JoinButton(widget.socket, widget.userController, nameController,
+          JoinButton( widget.userController, nameController,
               widget.convsController, emailController, passwordController),
         ],
       ),
@@ -122,8 +128,7 @@ class MyButton extends StatelessWidget {
   UserController userController;
   var nameController, emailController, passwordController;
   ConversationController convsController;
-  IO.Socket socket;
-  MyButton(this.socket, this.userController, this.convsController,
+  MyButton(this.userController, this.convsController,
       this.nameController, this.emailController, this.passwordController,
       {super.key});
 
@@ -131,12 +136,17 @@ class MyButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-       // print(userController.users.length);
-       // print(convsController.conversations.length);
-       // print(socket.id);
-       // print(nameController.text);
-        //print(emailController.text);
-       // print(passwordController.text);
+        Socket socket = io(
+            'https://nodejsrealtimechat.onrender.com/',
+            OptionBuilder()
+                .setTransports(['websocket']) // for Flutter or Dart VM
+                .disableAutoConnect() // disable auto-connection
+            //.setExtraHeaders({'foo': 'bar'}) // optional
+                .build());
+        socket.connect();
+        socket.on("connect", (data)  {
+          print("Connected: "+ socket.id.toString());
+        });
 
         userController.createUser(
             context,
@@ -149,7 +159,6 @@ class MyButton extends StatelessWidget {
             socket);
       },
       child: Container(
-        height: 50.0,
         padding: const EdgeInsets.all(8.0),
         margin: const EdgeInsets.symmetric(horizontal: 8.0),
         decoration: BoxDecoration(
@@ -166,15 +175,30 @@ class MyButton extends StatelessWidget {
 
 class JoinButton extends StatelessWidget {
   UserController userController;
-  IO.Socket socket;
   var nameController, emailController, passwordController;
   ConversationController convsController;
-  JoinButton(this.socket, this.userController, this.nameController,
+  JoinButton(this.userController, this.nameController,
       this.convsController, this.emailController, this.passwordController,
       {super.key});
 
   @override
   Widget build(BuildContext context) {
+    Socket socket = io(
+        'https://nodejsrealtimechat.onrender.com/',
+        OptionBuilder()
+            .setTransports(['websocket']) // for Flutter or Dart VM
+            .disableAutoConnect() // disable auto-connection
+        //.setExtraHeaders({'foo': 'bar'}) // optional
+            .build());
+    socket.connect();
+    socket.on("connect", (data)  {
+      print("Connected: "+ socket.id.toString());
+
+
+    });
+
+
+
     return GestureDetector(
       onTap: () {
         // print(nameController.text);

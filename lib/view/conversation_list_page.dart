@@ -21,6 +21,8 @@ class ConversationListPage extends StatefulWidget {
   UserController userController;
   IO.Socket socket;
 
+  var activeUsers = [];
+
   ConversationListPage(
       this.userController, this.convsController, this.currentUser, this.socket,
       {super.key});
@@ -30,9 +32,43 @@ class ConversationListPage extends StatefulWidget {
 }
 
 class _ConversationListPageState extends State<ConversationListPage> {
+
+
   @override
   Widget build(BuildContext context) {
     widget.convsController.getConversationByUserId(widget.currentUser.id!);
+    
+    widget.socket.on("leaveUser", (leaveUserChatId){
+      print("leaveUserChatId: "+ leaveUserChatId);
+
+      //getConvsIndex(widget.convsController.conversations, currentUserId)
+
+      for(int i =0; i< widget.convsController.conversations.length; i++){
+        for(int j = 0; j<widget.convsController.conversations[i].users!.length; j++){
+          if(widget.convsController.conversations[i].users![j].chatId==leaveUserChatId){
+            widget.convsController.conversations[i].users![j].status = "Offline";
+          }
+        }
+      }
+
+      widget.convsController.conversations.refresh();
+
+    });
+
+    widget.socket.on("JoinUser", (JoinUserChatId){
+      print("JoinUserChatId: "+ JoinUserChatId);
+      for(int i =0; i< widget.convsController.conversations.length; i++){
+        for(int j = 0; j<widget.convsController.conversations[i].users!.length; j++){
+          if(widget.convsController.conversations[i].users![j].chatId==JoinUserChatId){
+            widget.convsController.conversations[i].users![j].status = "Online";
+          }
+        }
+      }
+      widget.convsController.conversations.refresh();
+    });
+
+
+
 
     return MaterialApp(
         title: "Conversation Page",
@@ -110,6 +146,9 @@ class _ConversationWidgetState extends State<ConversationWidget> {
             ? widget.conversation.users![1]
             : widget.conversation.users![0];
 
+    var otherUserActiveStatus = widget.conversation.users![0].id==widget.currentUser.id?
+    widget.conversation.users![1].status : widget.conversation.users![0].status;
+
     return Card(
       child: InkWell(
         onTap: () => {
@@ -133,14 +172,14 @@ class _ConversationWidgetState extends State<ConversationWidget> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
                       Text(
-                        "${widget.conversation.id}",
+                        "${selectedUser.name}",
                         style: TextStyle(fontSize: 15, color: Colors.black),
                       ),
                       const SizedBox(
                         height: 5,
                       ),
                       Text(
-                        "${widget.conversation.id}",
+                        otherUserActiveStatus.toString(),
                         style: TextStyle(fontSize: 10, color: Colors.black87),
                       )
                     ]),

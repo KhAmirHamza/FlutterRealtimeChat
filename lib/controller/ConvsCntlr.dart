@@ -28,7 +28,8 @@ class ConversationController extends GetxController {
       'Accept': 'application/json'
     };
     var response = await dio.post(
-      'http://172.28.240.1:3000/conversation/add',
+      'https://nodejsrealtimechat.onrender.com/conversation/add',
+     // 'http://172.28.240.1:3000/conversation/add',
       data: jsonEncode(<String, dynamic>{
         "users": users,
         "messages": messages,
@@ -54,7 +55,7 @@ class ConversationController extends GetxController {
     }
   }
 
-  sendMessage(String convsId, Message message, IO.Socket socket) async {
+  sendMessage(String convsId, Message message, int conversationIndex, IO.Socket socket) async {
     print(message);
 
     var header = {
@@ -62,7 +63,8 @@ class ConversationController extends GetxController {
       'Accept': 'application/json'
     };
     var response = await dio.post(
-      "http://172.28.240.1:3000/conversation/sendMessage?convsId=" + convsId,
+     // "http://172.28.240.1:3000/conversation/sendMessage?convsId=" + convsId,
+      "https://nodejsrealtimechat.onrender.com/conversation/sendMessage?convsId=" + convsId,
       data: jsonEncode(<String, dynamic>{
         '_id': message.id,
         "fromId": message.fromId,
@@ -83,8 +85,15 @@ class ConversationController extends GetxController {
         "toId": messageData.toId,
         "text": messageData.text,
         "seenBy": messageData.seenBy,
-        'imageUrl': message.imageUrl,
+        'imageUrl': messageData.imageUrl,
+        'createdAt': messageData.createdAt,
+        'updatedAt': messageData.updatedAt,
       };
+
+
+      conversations[conversationIndex].messages!.add(messageData);
+      conversations.refresh();
+
       socket.emit('sendMessage', json);
       print("Message Send Successfully!");
     }
@@ -97,7 +106,8 @@ class ConversationController extends GetxController {
       'Accept': 'application/json'
     };
     var response = await dio.post(
-      "http://172.28.240.1:3000/conversation/seenMessage?convsId=" + convsId,
+      "https://nodejsrealtimechat.onrender.com/conversation/seenMessage?convsId=" + convsId,
+     // "http://172.28.240.1:3000/conversation/seenMessage?convsId=" + convsId,
       data: jsonEncode(<String, dynamic>{
         'messageId': messageId,
         "currentUserId": currentUserId,
@@ -124,7 +134,8 @@ class ConversationController extends GetxController {
       'Accept': 'application/json'
     };
     var response = await dio.get(
-      "http://172.28.240.1:3000/conversation/get?userId=${userId}",
+      "https://nodejsrealtimechat.onrender.com/conversation/get?userId=${userId}",
+    //  "http://172.28.240.1:3000/conversation/get?userId=${userId}",
       options: Options(headers: header),
     );
     if (response.statusCode == 200) {

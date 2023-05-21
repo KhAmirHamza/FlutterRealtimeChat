@@ -4,6 +4,7 @@ class User {
   String? name;
   String? email;
   String? password;
+  String? status;
 
   User({this.id, this.chatId, this.name, this.email, this.password});
 
@@ -13,6 +14,7 @@ class User {
     name = json['name'];
     email = json['email'];
     password = json['password'];
+    status = json['status'];
   }
 
   Map<String, dynamic> toJson() {
@@ -22,6 +24,7 @@ class User {
     data['name'] = this.name;
     data['email'] = this.email;
     data['password'] = this.password;
+    data['status'] = this.status;
     return data;
   }
 }
