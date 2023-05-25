@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:realtime_chat/controller/ConvsCntlr.dart';
+import 'package:realtime_chat/view/create_group.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:socket_io_client/socket_io_client.dart';
 import 'controller/userController.dart';
@@ -17,6 +18,24 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
+  late Socket socket;
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+
+     socket = io(
+        'https://nodejsrealtimechat.onrender.com/',
+        OptionBuilder()
+            .setTransports(['websocket']) // for Flutter or Dart VM
+            .disableAutoConnect() // disable auto-connection
+        //.setExtraHeaders({'foo': 'bar'}) // optional
+            .build());
+    socket.connect();
+    socket.on("connect", (data)  {
+      print("Connected: "+ socket.id.toString());
+    });
+  }
   @override
   Widget build(BuildContext context) {
 
@@ -30,15 +49,19 @@ class _MyAppState extends State<MyApp> {
           primarySwatch: Colors.blue,
         ),
         home: Scaffold(
-          body: JoinWidget( convsControler, userController),
+
+          body: JoinWidget( convsControler, userController, socket),
         ));
   }
 }
 
 class JoinWidget extends StatefulWidget {
+
+
+  IO.Socket socket;
   ConversationController convsController;
   UserController userController;
-  JoinWidget(this.convsController, this.userController,
+  JoinWidget(this.convsController, this.userController, this.socket,
       {super.key});
 
   @override
@@ -115,9 +138,9 @@ class _JoinWidgetState extends State<JoinWidget> {
             ),
           ),
           MyButton(widget.userController, widget.convsController,
-              nameController, emailController, passwordController),
+              nameController, emailController, passwordController, widget.socket),
           JoinButton( widget.userController, nameController,
-              widget.convsController, emailController, passwordController),
+              widget.convsController, emailController, passwordController, widget.socket),
         ],
       ),
     );
@@ -128,25 +151,19 @@ class MyButton extends StatelessWidget {
   UserController userController;
   var nameController, emailController, passwordController;
   ConversationController convsController;
+  IO.Socket socket;
   MyButton(this.userController, this.convsController,
       this.nameController, this.emailController, this.passwordController,
+      this.socket,
       {super.key});
 
   @override
   Widget build(BuildContext context) {
+
+
+
     return GestureDetector(
       onTap: () {
-        Socket socket = io(
-            'https://nodejsrealtimechat.onrender.com/',
-            OptionBuilder()
-                .setTransports(['websocket']) // for Flutter or Dart VM
-                .disableAutoConnect() // disable auto-connection
-            //.setExtraHeaders({'foo': 'bar'}) // optional
-                .build());
-        socket.connect();
-        socket.on("connect", (data)  {
-          print("Connected: "+ socket.id.toString());
-        });
 
         userController.createUser(
             context,
@@ -154,6 +171,7 @@ class MyButton extends StatelessWidget {
             convsController,
             socket.id!,
             nameController.text,
+            "imageUrl",
             emailController.text,
             passwordController.text,
             socket);
@@ -177,26 +195,14 @@ class JoinButton extends StatelessWidget {
   UserController userController;
   var nameController, emailController, passwordController;
   ConversationController convsController;
+  IO.Socket socket;
+
   JoinButton(this.userController, this.nameController,
-      this.convsController, this.emailController, this.passwordController,
+      this.convsController, this.emailController, this.passwordController, this.socket,
       {super.key});
 
   @override
   Widget build(BuildContext context) {
-    Socket socket = io(
-        'https://nodejsrealtimechat.onrender.com/',
-        OptionBuilder()
-            .setTransports(['websocket']) // for Flutter or Dart VM
-            .disableAutoConnect() // disable auto-connection
-        //.setExtraHeaders({'foo': 'bar'}) // optional
-            .build());
-    socket.connect();
-    socket.on("connect", (data)  {
-      print("Connected: "+ socket.id.toString());
-
-
-    });
-
 
 
     return GestureDetector(
@@ -227,3 +233,5 @@ class JoinButton extends StatelessWidget {
     );
   }
 }
+
+

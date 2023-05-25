@@ -9,6 +9,7 @@ import 'package:realtime_chat/model/User.dart';
 import 'package:realtime_chat/view/conversation_list_page.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 
+import '../view/create_group.dart';
 import '../view/user_list_page.dart';
 
 class UserController extends GetxController {
@@ -21,6 +22,7 @@ class UserController extends GetxController {
       ConversationController convsController,
       String chatId,
       String name,
+      String imageUrl,
       String email,
       String password,
       IO.Socket socket) async {
@@ -34,6 +36,7 @@ class UserController extends GetxController {
       data: jsonEncode(<String, String>{
         "chatId": chatId,
         "name": name,
+        "imageUrl": imageUrl,
         "email": email,
         "password": password,
         "status": "Online",
@@ -70,7 +73,7 @@ class UserController extends GetxController {
       options: Options(headers: header),
     );
     if (responce.statusCode == 200) {
-      var result = jsonDecode(responce.data);
+      var result = responce.data;
       for (int i = 0; i < result.length; i++) {
         User user = User.fromJson(result[i]);
         users.add(user);
@@ -102,9 +105,9 @@ class UserController extends GetxController {
           users.add(user);
         }
       }
-
       print('users: ' + users.length.toString());
     }
+
   }
 
   void verifyUserData(
@@ -144,12 +147,18 @@ class UserController extends GetxController {
         String userId = userController.users[0].id!;
         userController.updateUserChatId(context, userId, chatId, userController,
             userName, userEmail, userPassword);
+
+
         Navigator.push(
           context,
           MaterialPageRoute(
-              builder: (context) => ConversationListPage(userController,
-                  convsController, userController.users[0], socket)),
-        );
+              builder: (context) =>
+           // CreateGroupWidget(userController, convsController, users[0], socket)
+     ConversationListPage(userController,
+                  convsController, userController.users[0], socket)
+          ));
+
+
       }
     }
   }

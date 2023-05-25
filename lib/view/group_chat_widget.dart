@@ -1,7 +1,6 @@
 //import 'dart:io';
 import 'dart:convert';
 import 'dart:io';
-import 'package:flutter/cupertino.dart';
 import 'package:mime/mime.dart';
 import 'package:dio/dio.dart';
 import 'package:dio/src/form_data.dart' as FormData;
@@ -22,67 +21,70 @@ import 'package:http/http.dart' as http;
 
 import '../model/Conversation.dart';
 
-class MessageListPage extends StatefulWidget {
+class GroupChatWidget extends StatefulWidget {
   // Completely Done for now
   ConversationController convsController;
-  User currentUser, selectedUser;
+  User currentUser;
   int convsIndex;
   final dio = Dio();
   IO.Socket socket;
 
-  MessageListPage(
-      this.convsController, this.currentUser, this.selectedUser, this.socket, this.convsIndex,
+  GroupChatWidget(
+      this.convsController, this.currentUser, this.socket, this.convsIndex,
       {super.key});
 
   @override
-  State<MessageListPage> createState() => _MessageListPageState();
+  State<GroupChatWidget> createState() => _GroupChatWidgetState();
 }
 
-class _MessageListPageState extends State<MessageListPage> {
+class _GroupChatWidgetState extends State<GroupChatWidget> {
   @override
   initState() {
-    super.initState(); // var messageList =
-    //     widget.convsController.conversations[widget.convsIndex].messages;
-    //
-    // if (!(messageList![messageList.length - 1]
-    //     .seenBy!
-    //     .contains(widget.currentUser.id!))) {
-    //   print("Message Seen at Initial State");
-    //
-    //   String convsId =
-    //   widget.convsController.conversations[widget.convsIndex].id.toString();
-    //
-    //   String convsType =
-    //   widget.convsController.conversations[widget.convsIndex].type.toString();
-    //
-    //   String messageId = widget
-    //       .convsController
-    //       .conversations[widget.convsIndex]
-    //       .messages![widget.convsController.conversations[widget.convsIndex]
-    //       .messages!.length -
-    //       1]
-    //       .id
-    //       .toString();
-    //
-    //   widget.convsController.seenMessage(convsId, convsType, messageId, widget.socket, widget.currentUser.id!);
-    //
-    // }
+    super.initState();
+    print("widget.conversation.id:"+widget.convsController.conversations[widget.convsIndex].id.toString());
+/*
+    var messageList =
+        widget.convsController.conversations[widget.convsIndex].messages;
 
+    if (!(messageList![messageList.length - 1]
+        .seenBy!
+        .contains(widget.currentUser.id!))) {
+      print("Message Seen at Initial State");
 
+      String convsId =
+      widget.convsController.conversations[widget.convsIndex].id.toString();
+
+      String convsType =
+      widget.convsController.conversations[widget.convsIndex].type.toString();
+      String messageId = widget
+          .convsController
+          .conversations[widget.convsIndex]
+          .messages![widget.convsController.conversations[widget.convsIndex]
+          .messages!.length -
+          1]
+          .id
+          .toString();
+
+      widget.convsController.seenMessage(convsId, convsType, messageId, widget.socket, widget.currentUser.id!);
+
+    }*/
 
      receiveMessage(); //Check if last message has not seen yet...
 
   }
 
   receiveMessage() {
-    //Receive Message Seen Info after using
+    //Receive Message Seen Info
 
-    String notifyMessageSeenEvent ="notifyMessageSeen?convsId=${widget.convsController.conversations[widget.convsIndex].id}&convsType=Single";
+    // String notifyMessageSeenEvent =
+    //     'notifyMessageSeen=${widget.convsController.conversations[convsIndex].id}';
+
+    String notifyMessageSeenEvent ="notifyMessageSeen?convsId=${widget.convsController.conversations[widget.convsIndex].id}&convsType=Group";
+
 
     widget.socket.on(notifyMessageSeenEvent, (data)
     {
       print("Other User Has Seen Message: ");
-
       var jsonMap = data as Map<String, dynamic>;
 
       if (!widget
@@ -93,6 +95,7 @@ class _MessageListPageState extends State<MessageListPage> {
           1]
           .seenBy!.contains(jsonMap['newUserId'])) {
 
+
       widget
           .convsController
           .conversations[widget.convsIndex]
@@ -102,32 +105,40 @@ class _MessageListPageState extends State<MessageListPage> {
           .seenBy!
           .add(jsonMap['newUserId']);
       widget.convsController.conversations.refresh();
+
     }
     });
 
 
 
     Conversation convs = widget.convsController.conversations[widget.convsIndex];
-    String receiveMessageEvent = "receiveMessage?convsId=${convs.id}&convsType=Single";
-    widget.socket.on(receiveMessageEvent, (data)
-    {
+    String receiveMessageEvent = "receiveMessage?convsId=${convs.id}&convsType=Group";
+
+    //Receive Message from Server that actually sent by other Client.
+    widget.socket.on(receiveMessageEvent, (data) {
+
+
+      print("ReceiveMessageCalled");
+      print("widget.currentUser.id: "+widget.currentUser.id.toString());
+
       var jsonMap = data as Map<String, dynamic>;
-      if (jsonMap['fromId'] != widget.currentUser.id!) {
+
+      if(jsonMap['fromId']!=widget.currentUser.id!){
 
 
       var seenByList = jsonMap['seenBy'].toList();
 
       List<String> seenBy = <String>[];
+
       for (var i = 0; i < seenByList.length; i++) {
-        //Convert And Reasign Existing SeenBy Data...
+        //Convert And Reassign Existing SeenBy Data...
         seenBy.add(seenByList[i]);
+        print("seenByList[${i}]"+seenByList[i].toString());
+
       }
 
-      print("widget.currentUser.id:${widget.currentUser.id}");
-      print("seenBy.length pre:${seenBy.length}");
       if (!(seenBy.contains(widget.currentUser.id!))) {
         seenBy.add(widget.currentUser.id!);
-        print("seenBy.length post:${seenBy.length}");
 
         widget.convsController.conversations[widget.convsIndex].messages!.add(
             Message(
@@ -143,6 +154,7 @@ class _MessageListPageState extends State<MessageListPage> {
         String convsId = widget
             .convsController.conversations[widget.convsIndex].id
             .toString();
+
         String convsType = widget
             .convsController.conversations[widget.convsIndex].type
             .toString();
@@ -155,28 +167,27 @@ class _MessageListPageState extends State<MessageListPage> {
             1]
             .id
             .toString();
-        widget.convsController.seenMessage(
-            convsId, convsType, messageId, widget.socket,
-            widget.currentUser.id!);
+
+        widget.convsController.seenMessage(convsId, convsType, messageId, widget.socket, widget.currentUser.id!);
         print(jsonMap);
-
-        widget.convsController.conversations.refresh();
-
       }
     }
+
     });
   }
 
   @override
   Widget build(BuildContext context) {
-
-
     return Scaffold(
           appBar: AppBar(leading: BackButton(
               color: Colors.black,
             onPressed: ()=> Navigator.of(context, rootNavigator: true).pop(),
           ), title: Align( alignment: Alignment.center,
-            child: Column(children: <Widget>[Text(widget.selectedUser.name.toString(),style: TextStyle(fontSize: 20, color: Colors.black),),
+            child: Column(children: <Widget>[
+              Container( margin: EdgeInsets.only(bottom: 5),
+                child: Text(widget.convsController.conversations[widget.convsIndex].title.toString(),
+                style: TextStyle(fontSize: 20, color: Colors.black),),
+              ),
               Text("Neways Internationl (S&IT)", style: TextStyle(fontSize: 10),),]),
           ),
             actions: <Widget>[
@@ -190,20 +201,20 @@ class _MessageListPageState extends State<MessageListPage> {
               ),
 
             ],),
-          body: MessageListWidget(widget.convsController, widget.currentUser,
-              widget.selectedUser, widget.socket),
+          body: MessageListWidget(widget.convsController, widget.currentUser, widget.socket, widget.convsIndex),
         );
   }
 }
 
 class MessageListWidget extends StatefulWidget {
   ConversationController convsController;
-  User currentUser, selectedUser;
+  User currentUser;
   IO.Socket socket;
+  int convsIndex;
   final dio = Dio();
 
   MessageListWidget(
-      this.convsController, this.currentUser, this.selectedUser, this.socket,
+      this.convsController, this.currentUser, this.socket, this.convsIndex,
       {super.key});
 
   @override
@@ -220,20 +231,9 @@ class _MessageListWidgetState extends State<MessageListWidget> {
       children: <Widget>[
         Expanded(child: GetX<ConversationController>(
           builder: (controller) {
-            int conversationIndex = 0;
-            for (int i = 0;
-            i < widget.convsController.conversations.length;
-            i++) {
-              if (widget.convsController.conversations[i].users![0].id ==
-                  widget.currentUser.id ||
-                  widget.convsController.conversations[i].users![1].id ==
-                      widget.currentUser.id) {
-                conversationIndex = i;
-                break;
-              }
-            }
+
             var items = widget
-                .convsController.conversations[conversationIndex].messages;
+                .convsController.conversations[widget.convsIndex].messages;
 
             return ListView.builder(
               reverse: true,
@@ -243,10 +243,10 @@ class _MessageListWidgetState extends State<MessageListWidget> {
                 final item = items[reversedIndex];
                 List<String>? seenBy = item.seenBy;
 
-                bool hasSeen = false;
-                if (item.seenBy!.contains(widget.selectedUser.id)) {
+                bool hasSeen = true;
+                /*if (item.seenBy!.contains(widget.selectedUser.id)) {
                   hasSeen = true;
-                }
+                }*/
 
                 print("SeenByNow1: " + item.seenBy.toString());
 
@@ -255,10 +255,10 @@ class _MessageListWidgetState extends State<MessageListWidget> {
 
                 bool isLastSendMessage = reversedIndex == position;
 
-               String createdAtDate =  item.createdAt!.toString().substring(0, 10);
+                String createdAtDate =  item.createdAt!.toString().substring(0, 10);
 
                 bool hasMessagesAtSameDay = false;
-                 if(reversedIndex>0){
+                if(reversedIndex>0){
                   String createdAtPreviousDate =  items[reversedIndex-1].createdAt!.substring(0, 10);
                   if(createdAtPreviousDate==createdAtDate) hasMessagesAtSameDay = true;
                 }
@@ -286,11 +286,12 @@ class _MessageListWidgetState extends State<MessageListWidget> {
                 ],);
 
 
+
               },
             );
           },
         )),
-        ChatMessageTypingField(widget.convsController, widget.currentUser, widget.selectedUser, widget.socket),
+        ChatMessageTypingField(widget.convsController, widget.currentUser, widget.socket, widget.convsIndex),
       ],
     );
   }
@@ -325,6 +326,11 @@ class ChatBubble extends StatelessWidget {
 
 
     Message message = item;
+
+    // String seenUsersListText = "";
+    // for(int i=0; i<message.seenBy!.length; i++){
+    //   seenUsersListText+=message.seenBy![i]
+    // }
 
 
     return Padding(
@@ -373,11 +379,11 @@ class ChatBubble extends StatelessWidget {
 
         ),
         Visibility(
-          visible: isLastSendMessage,
+          visible: isLastSendMessage&&message.seenBy!.length>1,
           child: Container(
             alignment: Alignment.bottomRight,
-            margin: EdgeInsets.fromLTRB(0, 5, 10, 0),
-            child: Text(hasSeen ? "Seen" : "Unseen"),
+            margin: EdgeInsets.fromLTRB(0, 5, 0, 0),
+            child: Text("Seen (${message.seenBy!.length})",style: TextStyle(fontSize: 12),),
           ),
         )
       ]),
@@ -385,49 +391,69 @@ class ChatBubble extends StatelessWidget {
   }
 }
 
+/*class SendMessageButton extends StatelessWidget {
+  TextEditingController messageController;
+  ConversationController convsController;
+  String currentUserId;
+  User selectedUser;
+  IO.Socket socket;
+  String imageUrl;
+
+  SendMessageButton(this.convsController, this.messageController,
+      this.currentUserId, this.selectedUser, this.socket, this.imageUrl,
+      {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      child: Container(
+        margin: EdgeInsets.all(5),
+        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        child: Text(
+          "Send",
+          style: TextStyle(fontSize: 25),
+        ),
+      ),
+      onTap: () => {
+
+      },
+    );
+  }
+}*/
+
 sendMessage(
     ConversationController convsController,
     String currentUserId,
-    String selectedUserId,
     String messageText,
     String imageUrl,
-    IO.Socket socket) {
-
-
-  int conversationIndex = 0;
-  for (int i = 0; i < convsController.conversations.length; i++) {
-    if (convsController.conversations[i].users![0].id == currentUserId ||
-        convsController.conversations[i].users![1].id == currentUserId) {
-      conversationIndex = i;
-      break;
-    }
-  }
+    IO.Socket socket,
+    int convsIndex) {
 
   List<String> seenBy = <String>[];
   seenBy.add(currentUserId);
 
   Message message = Message(
-      id: "",
-      fromId: currentUserId,
-      toId: selectedUserId,
-      text: messageText,
-      seenBy: seenBy,
-      imageUrl: imageUrl,
+    id: "",
+    fromId: currentUserId,
+    toId: "all",
+    text: messageText,
+    seenBy: seenBy,
+    imageUrl: imageUrl,
   );
 
   convsController.sendMessage(
-      convsController.conversations[conversationIndex].id!,convsController.conversations[conversationIndex].type!, message, conversationIndex, socket);
-
+      convsController.conversations[convsIndex].id!,convsController.conversations[convsIndex].type!, message, convsIndex, socket);
 
 }
 
+
 class ChatMessageTypingField extends StatefulWidget {
   ConversationController convsController;
-  User currentUser, selectedUser;
+  User currentUser;
   IO.Socket socket;
+  int convsIndex;
 
-
-  ChatMessageTypingField(this.convsController, this.currentUser, this.selectedUser, this.socket, { Key? key}) : super(key: key);
+  ChatMessageTypingField(this.convsController, this.currentUser, this.socket, this.convsIndex, { Key? key}) : super(key: key);
 
   @override
   _ChatMessageTypingFieldState createState() => _ChatMessageTypingFieldState();
@@ -461,19 +487,21 @@ class _ChatMessageTypingFieldState extends State<ChatMessageTypingField> {
                   IconButton(
                       icon: Icon(Icons.face , color: Colors.blueAccent,), onPressed: () {}),
                   Expanded(
-                    child: TextField(
-                      controller: messageController,
-                      decoration: InputDecoration(
-                          hintText: "Type Something...",
-                          hintStyle: TextStyle( color:     Colors.blueAccent),
-                          border: InputBorder.none),
-                      onChanged: (text){
-                        setState(() {
-                        });
+                    child: Material(
+                      child: TextField(
+                        controller: messageController,
+                        decoration: InputDecoration(
+                            hintText: "Type Something...",
+                            hintStyle: TextStyle( color:     Colors.blueAccent),
+                            border: InputBorder.none),
+                        onChanged: (text){
+                          setState(() {
+                          });
 
 
 
-                      },
+                        },
+                      ),
                     ),
                   ),
                   IconButton(
@@ -483,10 +511,9 @@ class _ChatMessageTypingFieldState extends State<ChatMessageTypingField> {
                       _openGalleryAndUploadImage(
                           widget.convsController,
                           widget.currentUser.id!,
-                          widget.selectedUser.id!,
                           messageController,
                           "",
-                          widget.socket);
+                          widget.socket, widget.convsIndex);
 
                     },
                   ),
@@ -508,8 +535,7 @@ class _ChatMessageTypingFieldState extends State<ChatMessageTypingField> {
               onTap: (){
                 if(messageController.text.length>0){
                   //Send Text Message
-                  sendMessage(widget.convsController, widget.currentUser.id!, widget.selectedUser.id!,
-                      messageController.text, "",  widget.socket);
+                  sendMessage(widget.convsController, widget.currentUser.id!, messageController.text, "",  widget.socket, widget.convsIndex);
                   messageController.text = "";
                 }else{
                   //todo...Send Voice Message...
@@ -531,10 +557,9 @@ class _ChatMessageTypingFieldState extends State<ChatMessageTypingField> {
   void _openGalleryAndUploadImage(
       ConversationController convsController,
       String currentUserId,
-      String selectedUserId,
       TextEditingController messageController,
       imageUrl,
-      IO.Socket socket) async {
+      IO.Socket socket, int convsIndex) async {
     file = await ImagePicker()
         .pickImage(source: ImageSource.gallery); //pick an image
     //upload file...
@@ -549,8 +574,7 @@ class _ChatMessageTypingFieldState extends State<ChatMessageTypingField> {
       var response = await dio.post(
           "https://nodejsrealtimechat.onrender.com/upload",
           data: {"image": base64Image, "name": filename});
-      await sendMessage(convsController, currentUserId, selectedUserId,
-          messageController.text, response.data['url'], socket);
+      await sendMessage(convsController, currentUserId, messageController.text, response.data['url'], socket, convsIndex);
     } catch (e) {
       print(e.toString());
     }

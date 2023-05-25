@@ -7,6 +7,9 @@ import 'package:realtime_chat/controller/userController.dart';
 import 'package:realtime_chat/model/Conversation.dart';
 import 'package:realtime_chat/model/Message.dart';
 import 'package:realtime_chat/model/User.dart';
+import 'package:realtime_chat/view/create_group.dart';
+import 'package:realtime_chat/view/group_chat_widget.dart';
+import 'package:realtime_chat/view/message_list_page.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import '../view/conversation_list_page.dart';
 
@@ -14,15 +17,18 @@ class ConversationController extends GetxController {
   var conversations = <Conversation>[].obs;
   final dio = Dio();
 
-  createConversation(
+  createSingleConversation(
       BuildContext context,
       IO.Socket socket,
       UserController userController,
       ConversationController convsController,
-      User currentUser,
+      User currentUser, User selectedUser,
       String id,
+      String title,
+      String type,
       List<User> users,
       List<Message> messages) async {
+
     var header = {
       'Content-type': 'application/json; charset=utf-8',
       'Accept': 'application/json'
@@ -31,6 +37,8 @@ class ConversationController extends GetxController {
       'https://nodejsrealtimechat.onrender.com/conversation/add',
      // 'http://172.28.240.1:3000/conversation/add',
       data: jsonEncode(<String, dynamic>{
+        "title": title,
+        "type": type,
         "users": users,
         "messages": messages,
       }),
@@ -43,19 +51,72 @@ class ConversationController extends GetxController {
       print(userController.users.length.toString());
       print(convsController.conversations.length.toString());
       print(socket.id.toString());
-      
+
+      var result = response.data;
+      Conversation conversation = Conversation.fromJson(result);
+      conversations.add(conversation);
+      print("Conversations: " + result.length.toString());
+      conversations.refresh();
+
 
       Navigator.push(
           context,
           MaterialPageRoute(
-              builder: (context) => 
+              builder: (context) =>
               ConversationListPage(userController, convsController, currentUser, socket)
+          //  MessageListPage(convsController, currentUser, selectedUser, socket)
               ));
-
     }
   }
 
-  sendMessage(String convsId, Message message, int conversationIndex, IO.Socket socket) async {
+  createGroupConversation(
+      BuildContext context,
+      IO.Socket socket,
+      UserController userController,
+      ConversationController convsController,
+      User currentUser,
+      String id,
+      String title,
+      String type,
+      List<User> users,
+      List<Message> messages) async {
+
+    var header = {
+      'Content-type': 'application/json; charset=utf-8',
+      'Accept': 'application/json'
+    };
+    var response = await dio.post(
+      'https://nodejsrealtimechat.onrender.com/conversation/add',
+      // 'http://172.28.240.1:3000/conversation/add',
+      data: jsonEncode(<String, dynamic>{
+        "title": title,
+        "type": type,
+        "users": users,
+        "messages": messages,
+      }),
+      options: Options(headers: header),
+    );
+
+
+    if (response.statusCode == 200) {
+      print("Conversation Successfully Added!");
+
+      print("userController");
+      print(userController.users.length.toString());
+      print(convsController.conversations.length.toString());
+      print(socket.id.toString());
+
+
+      Navigator.push(
+          context,
+          MaterialPageRoute(
+              builder: (context) =>
+            ConversationListPage(userController, convsController, currentUser, socket)
+          ));
+    }
+  }
+
+  sendMessage(String convsId, String convsType,  Message message, int conversationIndex, IO.Socket socket) async {
     print(message);
 
     var header = {
@@ -83,6 +144,8 @@ class ConversationController extends GetxController {
         "_id": messageData.id,
         "fromId": messageData.fromId,
         "toId": messageData.toId,
+        "convsId": convsId,
+        "convsType": convsType,
         "text": messageData.text,
         "seenBy": messageData.seenBy,
         'imageUrl': messageData.imageUrl,
@@ -99,12 +162,18 @@ class ConversationController extends GetxController {
     }
   }
 
-  seenMessage(String convsId, String messageId, IO.Socket socket,
-      String otherUserId, String currentUserId) async {
+  seenMessage(String convsId, String convsType, String messageId, IO.Socket socket, String currentUserId) async {
     var header = {
       'Content-type': 'application/json; charset=utf-8',
       'Accept': 'application/json'
     };
+    int currentUserCount = 0;
+    for(int i=0; i<conversations[conversations.length-1].messages![conversations[conversations.length-1].messages!.length-1].seenBy!.length; i++){
+      if(conversations[conversations.length-1].messages![conversations[conversations.length-1].messages!.length-1].seenBy![i]==currentUserId){
+        currentUserCount++;
+      }
+    }
+    if(currentUserCount>1){
     var response = await dio.post(
       "https://nodejsrealtimechat.onrender.com/conversation/seenMessage?convsId=" + convsId,
      // "http://172.28.240.1:3000/conversation/seenMessage?convsId=" + convsId,
@@ -115,15 +184,16 @@ class ConversationController extends GetxController {
       options: Options(headers: header),
     );
     if (response.statusCode == 200) {
-      notifyMessageSeen(socket, otherUserId, currentUserId);
+      notifyMessageSeen(socket, convsId, convsType, currentUserId);
+
+    }
     }
   }
 
   void notifyMessageSeen(
-      IO.Socket socket, String otherUserId, String currentUserId) {
-    var json = {"otherUserId": otherUserId, "currentUserId": currentUserId};
+      IO.Socket socket, String convsId, String convsType, String currentUserId) {
+    var json = {"convsId": convsId,"convsType": convsType, "newUserId": currentUserId};
     socket.emit('notifyMessageSeen', json);
-    conversations.refresh();
   }
 
   void getConversationByUserId(String userId) async {

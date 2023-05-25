@@ -16,6 +16,8 @@ import 'package:realtime_chat/view/conversation_list_page.dart';
 import 'package:realtime_chat/view/message_list_page.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 
+import 'create_group.dart';
+
 class UserListPage extends StatefulWidget {
   UserController userController;
   ConversationController convsController;
@@ -30,31 +32,75 @@ class UserListPage extends StatefulWidget {
 }
 
 class _UserListPageState extends State<UserListPage> {
+
   @override
-  Widget build(BuildContext context) {
+  void initState() {
+    // TODO: implement initState
+    super.initState();
     widget.userController.getUsersDataExceptOne(
         widget.currentUser.name, widget.currentUser.email);
+  }
+  @override
+  Widget build(BuildContext context) {
 
-    return MaterialApp(
-        title: "Choose Contact",
-        theme: ThemeData(
-          primarySwatch: Colors.blue,
-        ),
-        home: Container(child: GetX<UserController>(
-          builder: (controller) {
-            return ListView.builder(
-              itemCount: controller.users.length,
-              itemBuilder: (context, index) {
-                return UserWidget(
-                    widget.userController,
-                    widget.convsController,
-                    widget.currentUser,
-                    widget.userController.users[index],
-                    widget.socket);
-              },
-            );
-          },
-        )));
+
+    return Scaffold(
+            appBar: AppBar(
+              title: const Text("Select Contact", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),),
+              leading: BackButton(onPressed: () {
+                Navigator.of(context, rootNavigator: true).pop();
+              }, color: Colors.black),
+            ),
+            body: Column(children: <Widget>[
+
+              InkWell(
+                onTap: (){
+                  print("Create New Group Taped");
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) =>
+                              CreateGroupWidget(widget.userController, widget.convsController, widget.currentUser, widget.socket)
+                      ));
+
+                },
+                splashColor: Colors.pink,
+                child: Container(
+                padding: EdgeInsets.all(10),
+                child: Row(children: [
+                  CircleAvatar(backgroundImage: AssetImage('assets/conversation.png'),
+                    radius: 20,),
+                  Container( margin: EdgeInsets.fromLTRB(5, 10, 0, 10),
+                      child: Text("Create new group", style: TextStyle(fontSize: 14, color: Colors.black, fontWeight: FontWeight.bold),)),
+
+                ],),
+              ),),
+
+              Container(alignment: Alignment.centerLeft, margin: EdgeInsets.fromLTRB(5, 25, 0, 10),
+                  child: Text("Neways Users", style: TextStyle(fontSize: 12, color: Colors.grey),)),
+
+              Expanded(
+                child: GetX<UserController>(
+                  builder: (controller) {
+                    return ListView.builder(
+                      itemCount: controller.users.length,
+                      itemBuilder: (context, index) {
+                        return UserWidget(
+                              widget.userController,
+                              widget.convsController,
+                              widget.currentUser,
+                              widget.userController.users[index],
+                              widget.socket);
+                      },
+                    );
+                  },
+                ),
+              )
+
+
+            ]
+
+        ));
   }
 }
 
@@ -66,6 +112,7 @@ class UserWidget extends StatefulWidget {
 
   List<User> users = <User>[];
   IO.Socket socket;
+
   UserWidget(this.userController, this.convsController, this.currentUser,
       this.selectedUser, this.socket,
       {super.key});
@@ -77,6 +124,8 @@ class UserWidget extends StatefulWidget {
 class _UserWidgetState extends State<UserWidget> {
   @override
   Widget build(BuildContext context) {
+    String title = "${widget.currentUser.name} - ${widget.selectedUser.name}";
+
     List<String> seenBy = <String>[];
     seenBy.add(widget.currentUser.id.toString());
 
@@ -86,18 +135,22 @@ class _UserWidgetState extends State<UserWidget> {
         toId: "Initial",
         text: "Initial",
         seenBy: seenBy,
-        imageUrl: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTKTSNwcT2YrRQJKGVQHClGtQgp1_x8kLd0Ig&usqp=CAU"));
+        imageUrl:
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTKTSNwcT2YrRQJKGVQHClGtQgp1_x8kLd0Ig&usqp=CAU"));
     widget.users.add(widget.currentUser);
     widget.users.add(widget.selectedUser);
 
     return Card(
       child: InkWell(
         onTap: () => {
-          createConversation(
+
+          createSingleConversation(
               widget.convsController,
+              title,
               widget.users,
               widget.userController,
               widget.currentUser,
+              widget.selectedUser,
               widget.messages,
               widget.socket)
         },
@@ -133,14 +186,16 @@ class _UserWidgetState extends State<UserWidget> {
     );
   }
 
-  createConversation(
+  createSingleConversation(
       ConversationController convsController,
+      String title,
       List<User> users,
       UserController userController,
       User currentUser,
+      User selectedUser,
       List<Message> messages,
       IO.Socket socket) {
-    convsController.createConversation(context, socket, userController,
-        convsController, currentUser, "", users, messages);
+    convsController.createSingleConversation(context, socket, userController,
+        convsController, currentUser, selectedUser, "", title, "Single", users, messages);
   }
 }

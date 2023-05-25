@@ -3,6 +3,8 @@ import 'package:realtime_chat/model/User.dart';
 
 class Conversation {
   String? id;
+  String? title;
+  String? type;
   List<User>? users;
   List<Message>? messages;
   String? createdAt;
@@ -11,6 +13,8 @@ class Conversation {
 
   Conversation(
       {this.id,
+      this.title,
+      this.type,
       this.users,
       this.messages,
       this.createdAt,
@@ -19,6 +23,8 @@ class Conversation {
 
   Conversation.fromJson(Map<String, dynamic> json) {
     id = json['_id'];
+    title = json['title'];
+    type = json['type'];
     if (json['users'] != null) {
       users = <User>[];
       json['users'].forEach((v) {
@@ -41,6 +47,8 @@ class Conversation {
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = new Map<String, dynamic>();
     data['_id'] = this.id;
+    data['title'] = this.title;
+    data['type'] = this.type;
     if (this.users != null) {
       data['users'] = this.users!.map((v) => v.toJson()).toList();
     }
