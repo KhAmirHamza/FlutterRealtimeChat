@@ -9,7 +9,7 @@ import '../controller/ConvsCntlr.dart';
 import '../model/Message.dart';
 import '../model/User.dart';
 
-List<User> selectedUsers = <User>[] ;
+List<User> selectedUsers = <User>[];
 
 class CreateGroupWidget extends StatefulWidget {
   UserController userController;
@@ -29,7 +29,8 @@ class CreateGroupWidget extends StatefulWidget {
 class _CreateGroupWidgetState extends State<CreateGroupWidget> {
   final searchController = Get.put(SearchController());
 
-  refresh(List<User> users){
+
+  refresh(List<User> users) {
     setState(() {
       selectedUsers = users;
     });
@@ -43,13 +44,21 @@ class _CreateGroupWidgetState extends State<CreateGroupWidget> {
 
   @override
   Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+      widget.userController.getUsersDataExceptOne(widget.currentUser.name, widget.currentUser.email);
+    });
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Colors.white,
         leading: BackButton(
           color: Colors.black,
           onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
         ),
-        title: Text("Create a Group Chat"),
+        title: Text(
+          "Create a Group Chat",
+          style: TextStyle(
+              color: Colors.black, fontSize: 16, fontWeight: FontWeight.w900),
+        ),
         actions: [
           IconButton(
             onPressed: () {
@@ -57,10 +66,13 @@ class _CreateGroupWidgetState extends State<CreateGroupWidget> {
               showSearch(
                   context: context,
                   // delegate to customize the search bar
-                  delegate: CustomSearchDelegate(widget.userController, refresh)
-              );
+                  delegate:
+                      CustomSearchDelegate(widget.userController, refresh));
             },
-            icon: const Icon(Icons.search),
+            icon: const Icon(
+              Icons.search,
+              color: Colors.black,
+            ),
           )
         ],
       ),
@@ -89,12 +101,13 @@ class GroupWidget extends StatefulWidget {
   State<GroupWidget> createState() => _GroupWidgetState();
 }
 
-class _GroupWidgetState extends State<GroupWidget> with TickerProviderStateMixin{
+class _GroupWidgetState extends State<GroupWidget>
+    with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     TextEditingController searchController = TextEditingController();
 
-    refresh(List<User> users){
+    refresh(List<User> users) {
       setState(() {
         selectedUsers = users;
       });
@@ -111,13 +124,80 @@ class _GroupWidgetState extends State<GroupWidget> with TickerProviderStateMixin
     );
 
     // Generate a random border radius.
-    var _borderRadius =
-        BorderRadius.circular(random.nextInt(100).toDouble());
+    var _borderRadius = BorderRadius.circular(random.nextInt(100).toDouble());
+
 
     return Container(
       margin: EdgeInsets.fromLTRB(10, 7, 10, 10),
       child: Column(
         children: [
+          MaterialButton(
+              padding: EdgeInsets.only(left: 5),
+              height: 50,
+              onPressed: () {},
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 17.0,
+                    child: Icon(
+                      Icons.person, color: Colors.white,
+                    ),
+                    backgroundColor: Colors.blueAccent,
+                  ),
+                  Container(
+                    margin: EdgeInsets.only(left: 15),
+                    child: Text(
+                      "Friends",
+                      style: TextStyle(fontSize: 17, color: Colors.black),
+                    ),
+                  )
+                ],
+              )),
+          MaterialButton(
+              padding: EdgeInsets.only(left: 5),
+              height: 50,
+              onPressed: () {},
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 17.0,
+                    child: Icon(
+                      Icons.contact_phone_sharp, color: Colors.white, size: 18,
+                    ),
+                    backgroundColor: Colors.cyan[700],
+                  ),
+                  Container(
+                    margin: EdgeInsets.only(left: 15),
+                    child: Text(
+                      "Contacts",
+                      style: TextStyle(fontSize: 17, color: Colors.black),
+                    ),
+                  )
+                ],
+              )),
+          MaterialButton(
+              padding: EdgeInsets.only(left: 5),
+              height: 50,
+              onPressed: () {},
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 17.0,
+                    child: Icon(
+                      Icons.group_rounded, color: Colors.white,
+                    ),
+                    backgroundColor: Colors.green,
+                  ),
+                  Container(
+                    margin: EdgeInsets.only(left: 15),
+                    child: Text(
+                      "Select aGroup",
+                      style: TextStyle(fontSize: 17, color: Colors.black),
+                    ),
+                  )
+                ],
+              )),
+
           // Container(
           //   decoration: BoxDecoration(
           //     color: Colors.white,
@@ -145,61 +225,9 @@ class _GroupWidgetState extends State<GroupWidget> with TickerProviderStateMixin
           //     ),
           //   ),
           // ),
-          Card(margin: EdgeInsets.all(5),
-            elevation: 8,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 500),
-              // Provide an optional curve to make the animation feel smoother.
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius:BorderRadius.circular(15),
-              ),
-              //margin: EdgeInsets.fromLTRB(5,5,5,5),
-              height: selectedUsers.isEmpty?0:100,
-              curve: Curves.fastOutSlowIn,
-              padding: EdgeInsets.fromLTRB(5, 0, 5, 5),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Expanded(
-                    flex: 2,
-                    child: Container(
-                      alignment: Alignment.topLeft,
-                      margin: EdgeInsets.fromLTRB(5, 5, 5, 5),
-                      child: Text(
-                        "Selected Contact",
-                        style: TextStyle(fontSize: 14, color: Colors.grey),
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    flex: 5,
-                    child: ListView.builder(
-                      //physics: const NeverScrollableScrollPhysics(),
-                            itemCount: selectedUsers.length,
-                            scrollDirection: Axis.horizontal,
-                            itemBuilder: (context, index) {
-                              // return EmployeeItem(selecteUsers, index);
-                              int animDuraton = 2000;
-                              if(index>0) animDuraton = 1000;
-
-
-                              AnimationController _controller = AnimationController(
-                                  vsync: this, duration: Duration(milliseconds: animDuraton));
-
-                              return SelectedUserWidget(_controller, index);
-
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
           Container(
             alignment: Alignment.topLeft,
-            margin: EdgeInsets.fromLTRB(5, 20, 0, 5),
+            margin: EdgeInsets.fromLTRB(5, 10, 0, 5),
             child: Text(
               "Select Contact",
               style: TextStyle(fontSize: 14, color: Colors.grey),
@@ -214,45 +242,112 @@ class _GroupWidgetState extends State<GroupWidget> with TickerProviderStateMixin
                   });
             },
           )),
-          Container(
-            alignment: Alignment.bottomRight,
-            margin: EdgeInsets.all(5),
-            child: MaterialButton(
-              color: Colors.blue,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(22.0)),
-              clipBehavior: Clip.antiAlias,
-              elevation: 8,
-              onPressed: () {
-                //todo... goto next page
 
-                showCustomDialog(
-                    context,
-                    widget.convsController,
-                    widget.userController,
-                    widget.currentUser,
-                    widget.messages,
-                    widget.socket);
-              },
-              child: Text("Next", style: TextStyle(color: Colors.white)),
-            ),
-          )
+          Card(
+              margin: EdgeInsets.all(5),
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                side: BorderSide(color: Colors.white70, width: 1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+
+                  Expanded(
+                    flex: 3,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 500),
+                      // Provide an optional curve to make the animation feel smoother.
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                      //margin: EdgeInsets.fromLTRB(5,5,5,5),
+                      height: selectedUsers.isEmpty ? 0 : 80,
+                      curve: Curves.fastOutSlowIn,
+                      padding: EdgeInsets.fromLTRB(5, 0, 5, 5),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            flex: 2,
+                            child: Container(
+                              alignment: Alignment.topLeft,
+                              margin: EdgeInsets.fromLTRB(5, 5, 5, 0),
+                              child: Text(
+                                "Selected Contact: ( ${selectedUsers.length} )",
+                                style: TextStyle(fontSize: 14, color: Colors.grey),
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            flex: 5,
+                            child: ListView.builder(
+                              //physics: const NeverScrollableScrollPhysics(),
+                              itemCount: selectedUsers.length,
+                              scrollDirection: Axis.horizontal,
+                              itemBuilder: (context, index) {
+                                // return EmployeeItem(selecteUsers, index);
+                                int animDuraton = 2000;
+                                if (index > 0) animDuraton = 1000;
+
+                                AnimationController _controller = AnimationController(
+                                    vsync: this,
+                                    duration: Duration(milliseconds: animDuraton));
+
+                                return SelectedUserWidget(_controller, index);
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: Container(
+                      alignment: Alignment.bottomRight,
+                      //margin: EdgeInsets.all(5),
+                      child: MaterialButton(
+                        color: Colors.blueAccent,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(22.0)),
+                        clipBehavior: Clip.antiAlias,
+                        elevation: 8,
+                        onPressed: () {
+                          //todo... goto next page
+
+                          showCustomDialog(
+                              context,
+                              widget.convsController,
+                              widget.userController,
+                              widget.currentUser,
+                              widget.messages,
+                              widget.socket);
+                        },
+                        child: Text("Next", style: TextStyle(color: Colors.white)),
+                      ),
+                    ),
+                  )
+                ],)
+
+          ),
+
         ],
       ),
     );
   }
 }
 
-
 class SelectedUserWidget extends StatelessWidget {
-
   AnimationController animationController;
   int index;
-  SelectedUserWidget(this.animationController,this.index, {Key? key}) : super(key: key);
+  SelectedUserWidget(this.animationController, this.index, {Key? key})
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-
     // _controller.forward().then((value) => _controller.dispose());
     Future.delayed(Duration(milliseconds: index * 300), () {
       animationController.forward().then((_) {
@@ -265,49 +360,41 @@ class SelectedUserWidget extends StatelessWidget {
       });
     });
 
-    return FadeTransition(opacity: animationController,
-        child:
-
-        Card(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10.0),
-          ),
-          child: Container(
-            margin: EdgeInsets.all(10),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                const Expanded(
-                  flex:2,
-                  child: CircleAvatar(
-                    radius: 20,
-                    backgroundImage: NetworkImage(
-                        "https://cdn-icons-png.flaticon.com/512/2815/2815428.png"),
-                    backgroundColor: Colors.transparent,
-                  ),
+    return FadeTransition(
+        opacity: animationController,
+        child: Container(
+          margin: EdgeInsets.fromLTRB(5,10,10,0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              const Expanded(
+                flex: 2,
+                child: CircleAvatar(
+                  radius: 20,
+                  backgroundImage: NetworkImage(
+                      "https://cdn-icons-png.flaticon.com/512/2815/2815428.png"),
+                  backgroundColor: Colors.transparent,
                 ),
-                Expanded(
-                  child: Text(
-                    selectedUsers[index].name.toString(),
-                    style: TextStyle(fontSize: 12),
-                  ),
-                )
-              ],
-            ),
+              ),
+              Expanded(
+                child: Text(
+                  selectedUsers[index].name.toString(),
+                  style: TextStyle(fontSize: 12),
+                ),
+              )
+            ],
           ),
-        )
-    );
+        ));
   }
 }
 
-
 class EmployeeItem extends StatefulWidget {
-
   final Function(List<User> users) refresh;
   UserController userController;
   int index;
-  EmployeeItem(this.userController, this.index, this.refresh, {Key? key}) : super(key: key);
+  EmployeeItem(this.userController, this.index, this.refresh, {Key? key})
+      : super(key: key);
 
   @override
   State<EmployeeItem> createState() => _EmployeeItemState();
@@ -317,10 +404,11 @@ class _EmployeeItemState extends State<EmployeeItem> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 5),
+      margin: EdgeInsets.symmetric(horizontal: 0),
       child: Card(
-        clipBehavior: Clip.hardEdge,
-        elevation: 5,
+        clipBehavior: Clip.antiAlias,
+        elevation: 0,
+        margin: EdgeInsets.fromLTRB(5,0,5,2),
         child: InkWell(
             splashColor: Colors.blue.withAlpha(30),
             onTap: () {
@@ -329,16 +417,15 @@ class _EmployeeItemState extends State<EmployeeItem> {
 
               //select or remove contact
 
-              if (selectedUsers.contains(widget.userController.users[widget.index])) {
+              if (selectedUsers
+                  .contains(widget.userController.users[widget.index])) {
                 selectedUsers.remove(widget.userController.users[widget.index]);
               } else {
                 selectedUsers.add(widget.userController.users[widget.index]);
               }
               //userController.users.refresh();
               widget.refresh(selectedUsers);
-              setState(() {
-
-              });
+              setState(() {});
             },
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
@@ -353,10 +440,10 @@ class _EmployeeItemState extends State<EmployeeItem> {
                     child: CircleAvatar(
                       radius: 10,
                       backgroundColor: Colors.white,
-                      backgroundImage:
-                          selectedUsers.contains(widget.userController.users[widget.index])
-                              ? AssetImage('assets/selected.png')
-                              : null,
+                      backgroundImage: selectedUsers.contains(
+                              widget.userController.users[widget.index])
+                          ? AssetImage('assets/selected.png')
+                          : null,
                     ),
                   ),
                 ),
@@ -401,31 +488,34 @@ void showCustomDialog(
               color: Colors.white, borderRadius: BorderRadius.circular(20)),
           child: Column(
             children: [
-              Container(
-                margin: EdgeInsets.fromLTRB(0, 20, 0, 0),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(25.0),
-                  boxShadow: [
-                    BoxShadow(
-                        offset: Offset(0, 3),
-                        blurRadius: 7,
-                        color: Colors.blueGrey)
-                  ],
-                ),
+              Flexible(
+                flex: 1,
                 child: Container(
-                  margin: EdgeInsets.fromLTRB(20, 0, 20, 0),
-                  child: Material(
-                    child: TextField(
-                      controller: groupNameController,
-                      decoration: const InputDecoration(
-                        hintText: "Name of the group",
-                        hintStyle: TextStyle(color: Colors.grey),
-                        border: InputBorder.none,
+                  margin: EdgeInsets.fromLTRB(0, 20, 0, 0),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(25.0),
+                    boxShadow: [
+                      BoxShadow(
+                          offset: Offset(0, 3),
+                          blurRadius: 7,
+                          color: Colors.blueGrey)
+                    ],
+                  ),
+                  child: Container(
+                    margin: EdgeInsets.fromLTRB(20, 0, 20, 0),
+                    child: Material(
+                      child: TextField(
+                        controller: groupNameController,
+                        decoration: const InputDecoration(
+                          hintText: "Name of the group",
+                          hintStyle: TextStyle(color: Colors.grey),
+                          border: InputBorder.none,
+                        ),
+                        onChanged: (text) {
+                          //todo.... search user...
+                        },
                       ),
-                      onChanged: (text) {
-                        //todo.... search user...
-                      },
                     ),
                   ),
                 ),
@@ -439,14 +529,16 @@ void showCustomDialog(
                 ),
               ),
               Expanded(
+                flex: 1,
                   child: ListView.builder(
                       itemCount: selectedUsers.length,
                       scrollDirection: Axis.horizontal,
                       itemBuilder: (context, index) {
                         // return EmployeeItem(selecteUsers, index);
                         return Card(
+
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10.0),
+                            borderRadius: BorderRadius.circular(0),
                           ),
                           child: Container(
                             margin: EdgeInsets.all(10),
@@ -454,7 +546,7 @@ void showCustomDialog(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 const CircleAvatar(
-                                  radius: 20,
+                                  radius: 15,
                                   backgroundImage: NetworkImage(
                                       "https://cdn-icons-png.flaticon.com/512/2815/2815428.png"),
                                   backgroundColor: Colors.transparent,
@@ -486,8 +578,8 @@ void showCustomDialog(
 
                       messages.add(Message(
                           id: "Initial",
-                          fromId: "Initial",
-                          toId: "Initial",
+                          from: currentUser,
+                          to: "Initial",
                           text: "Initial",
                           seenBy: seenBy,
                           imageUrl:
@@ -544,7 +636,7 @@ createGroupConversation(
     List<Message> messages,
     IO.Socket socket) {
   convsController.createGroupConversation(context, socket, userController,
-      convsController, currentUser, "", title,"Group", users, messages);
+      convsController, currentUser, "", title, "Group", users, messages);
 }
 
 class CustomSearchDelegate extends SearchDelegate {
@@ -590,11 +682,9 @@ class CustomSearchDelegate extends SearchDelegate {
     return ListView.builder(
       itemCount: userController.users.length,
       itemBuilder: (context, index) {
-        return matchedUsers.contains(userController.users[index])?
-        ListTile(
-          title: EmployeeItem(userController, index, refresh)
-        ):
-            null;
+        return matchedUsers.contains(userController.users[index])
+            ? ListTile(title: EmployeeItem(userController, index, refresh))
+            : null;
       },
     );
   }
@@ -612,11 +702,9 @@ class CustomSearchDelegate extends SearchDelegate {
     return ListView.builder(
       itemCount: userController.users.length,
       itemBuilder: (context, index) {
-        return matchedUsers.contains(userController.users[index])?
-        ListTile(
-            title: EmployeeItem(userController, index, refresh)
-        ):
-        null;
+        return matchedUsers.contains(userController.users[index])
+            ? ListTile(title: EmployeeItem(userController, index, refresh))
+            : null;
       },
     );
   }

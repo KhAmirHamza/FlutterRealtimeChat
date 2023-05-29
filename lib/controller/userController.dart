@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:realtime_chat/controller/ConvsCntlr.dart';
 import 'package:realtime_chat/model/User.dart';
-import 'package:realtime_chat/view/conversation_list_page.dart';
+import 'package:realtime_chat/view/home_page.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 import '../view/create_group.dart';
@@ -19,13 +19,12 @@ class UserController extends GetxController {
   createUser(
       BuildContext context,
       UserController userController,
-      ConversationController convsController,
       String chatId,
       String name,
       String imageUrl,
       String email,
       String password,
-      IO.Socket socket) async {
+      IO.Socket socket, ConversationController convsController) async {
     var header = {
       'Content-type': 'application/json; charset=utf-8',
       'Accept': 'application/json'
@@ -57,7 +56,7 @@ class UserController extends GetxController {
           context,
           MaterialPageRoute(
               builder: (context) =>
-                  ConversationListPage(userController, convsController, user, socket)));
+                  HomePage(userController, user, socket, convsController)));
     }
   }
 
@@ -108,17 +107,18 @@ class UserController extends GetxController {
       print('users: ' + users.length.toString());
     }
 
+    users.refresh();
+
   }
 
   void verifyUserData(
       BuildContext context,
       String chatId,
       UserController userController,
-      ConversationController convsController,
       String userName,
       String userEmail,
       String userPassword,
-      IO.Socket socket) async {
+      IO.Socket socket, ConversationController convsController) async {
     users.clear();
 
     var header = {
@@ -154,8 +154,7 @@ class UserController extends GetxController {
           MaterialPageRoute(
               builder: (context) =>
            // CreateGroupWidget(userController, convsController, users[0], socket)
-     ConversationListPage(userController,
-                  convsController, userController.users[0], socket)
+     HomePage(userController,userController.users[0], socket, convsController)
           ));
 
 

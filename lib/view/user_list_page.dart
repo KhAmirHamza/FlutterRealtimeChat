@@ -12,8 +12,8 @@ import 'package:realtime_chat/controller/userController.dart';
 import 'package:realtime_chat/model/Conversation.dart';
 import 'package:realtime_chat/model/Message.dart';
 import 'package:realtime_chat/model/User.dart';
-import 'package:realtime_chat/view/conversation_list_page.dart';
-import 'package:realtime_chat/view/message_list_page.dart';
+import 'package:realtime_chat/view/home_page.dart';
+import 'package:realtime_chat/view/p_to_p_chat_page.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 import 'create_group.dart';
@@ -131,8 +131,8 @@ class _UserWidgetState extends State<UserWidget> {
 
     widget.messages.add(Message(
         id: "Initial",
-        fromId: "Initial",
-        toId: "Initial",
+        from: widget.currentUser,
+        to: "All",
         text: "Initial",
         seenBy: seenBy,
         imageUrl:

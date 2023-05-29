@@ -17,31 +17,52 @@ class MyApp extends StatefulWidget {
   State<MyApp> createState() => _MyAppState();
 }
 
+
+
+
 class _MyAppState extends State<MyApp> {
-  late Socket socket;
+
+
+  final convsController = Get.put(ConversationController());
+
+
+  Socket? socket;
+
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
-
-     socket = io(
-        'https://nodejsrealtimechat.onrender.com/',
-        OptionBuilder()
-            .setTransports(['websocket']) // for Flutter or Dart VM
-            .disableAutoConnect() // disable auto-connection
-        //.setExtraHeaders({'foo': 'bar'}) // optional
-            .build());
-    socket.connect();
-    socket.on("connect", (data)  {
-      print("Connected: "+ socket.id.toString());
-    });
+    connectToSocket();
   }
+
+
+  connectToSocket() {
+    if(socket!=null){ return; }
+      socket = io(
+          'https://nodejsrealtimechat.onrender.com/',
+          OptionBuilder()
+              .setTransports(['websocket']) // for Flutter or Dart VM
+              .disableAutoConnect() // disable auto-connection
+          //.setExtraHeaders({'foo': 'bar'}) // optional
+              .build());
+      socket!.connect();
+      socket!.on("connect", (data)  {
+        print("Connected: "+ socket!.id.toString());
+      });
+  }
+
+  @override
+  void dispose() {
+    if(socket!=null) {
+      socket!.disconnect();
+    }
+    super.dispose();
+}
   @override
   Widget build(BuildContext context) {
 
 
     var userController = Get.put(UserController());
-    var convsControler = Get.put(ConversationController());
+
 
     return MaterialApp(
         title: 'Flutter Realtime Chat',
@@ -50,34 +71,30 @@ class _MyAppState extends State<MyApp> {
         ),
         home: Scaffold(
 
-          body: JoinWidget( convsControler, userController, socket),
+          body: MainWidget( userController, socket!, convsController),
         ));
   }
 }
 
-class JoinWidget extends StatefulWidget {
-
+class MainWidget extends StatefulWidget {
 
   IO.Socket socket;
-  ConversationController convsController;
   UserController userController;
-  JoinWidget(this.convsController, this.userController, this.socket,
+  ConversationController convsController;
+  MainWidget( this.userController, this.socket, this.convsController,
       {super.key});
 
   @override
-  State<JoinWidget> createState() => _JoinWidgetState();
+  State<MainWidget> createState() => _MainWidgetState();
 }
 
-class _JoinWidgetState extends State<JoinWidget> {
+class _MainWidgetState extends State<MainWidget> {
   TextEditingController nameController = TextEditingController();
   TextEditingController emailController = TextEditingController();
   TextEditingController passwordController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
-
-
-
 
     return Container(
       child: Column(
@@ -137,10 +154,8 @@ class _JoinWidgetState extends State<JoinWidget> {
               ),
             ),
           ),
-          MyButton(widget.userController, widget.convsController,
-              nameController, emailController, passwordController, widget.socket),
-          JoinButton( widget.userController, nameController,
-              widget.convsController, emailController, passwordController, widget.socket),
+          MyButton(widget.userController, nameController, emailController, passwordController, widget.socket, widget.convsController),
+          JoinButton( widget.userController, nameController, emailController, passwordController, widget.socket, widget.convsController),
         ],
       ),
     );
@@ -152,9 +167,9 @@ class MyButton extends StatelessWidget {
   var nameController, emailController, passwordController;
   ConversationController convsController;
   IO.Socket socket;
-  MyButton(this.userController, this.convsController,
+  MyButton(this.userController,
       this.nameController, this.emailController, this.passwordController,
-      this.socket,
+      this.socket,this.convsController,
       {super.key});
 
   @override
@@ -168,13 +183,12 @@ class MyButton extends StatelessWidget {
         userController.createUser(
             context,
             userController,
-            convsController,
             socket.id!,
             nameController.text,
             "imageUrl",
             emailController.text,
             passwordController.text,
-            socket);
+            socket, convsController);
       },
       child: Container(
         padding: const EdgeInsets.all(8.0),
@@ -197,8 +211,7 @@ class JoinButton extends StatelessWidget {
   ConversationController convsController;
   IO.Socket socket;
 
-  JoinButton(this.userController, this.nameController,
-      this.convsController, this.emailController, this.passwordController, this.socket,
+  JoinButton(this.userController, this.nameController, this.emailController, this.passwordController, this.socket, this.convsController,
       {super.key});
 
   @override
@@ -212,11 +225,10 @@ class JoinButton extends StatelessWidget {
             context,
             socket.id!,
             userController,
-            convsController,
             nameController.text,
             emailController.text,
             passwordController.text,
-            socket);
+            socket, convsController);
       },
       child: Container(
         height: 50.0,

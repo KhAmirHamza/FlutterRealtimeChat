@@ -9,9 +9,9 @@ import 'package:realtime_chat/model/Message.dart';
 import 'package:realtime_chat/model/User.dart';
 import 'package:realtime_chat/view/create_group.dart';
 import 'package:realtime_chat/view/group_chat_widget.dart';
-import 'package:realtime_chat/view/message_list_page.dart';
+import 'package:realtime_chat/view/p_to_p_chat_page.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
-import '../view/conversation_list_page.dart';
+import '../view/home_page.dart';
 
 class ConversationController extends GetxController {
   var conversations = <Conversation>[].obs;
@@ -63,7 +63,7 @@ class ConversationController extends GetxController {
           context,
           MaterialPageRoute(
               builder: (context) =>
-              ConversationListPage(userController, convsController, currentUser, socket)
+              HomePage(userController, currentUser, socket, convsController)
           //  MessageListPage(convsController, currentUser, selectedUser, socket)
               ));
     }
@@ -111,7 +111,7 @@ class ConversationController extends GetxController {
           context,
           MaterialPageRoute(
               builder: (context) =>
-            ConversationListPage(userController, convsController, currentUser, socket)
+            HomePage(userController, currentUser, socket, convsController)
           ));
     }
   }
@@ -128,8 +128,8 @@ class ConversationController extends GetxController {
       "https://nodejsrealtimechat.onrender.com/conversation/sendMessage?convsId=" + convsId,
       data: jsonEncode(<String, dynamic>{
         '_id': message.id,
-        "fromId": message.fromId,
-        "toId": message.toId,
+        "from": message.from,
+        "to": message.to,
         'text': message.text,
         'seenBy': message.seenBy,
         'imageUrl': message.imageUrl,
@@ -142,8 +142,8 @@ class ConversationController extends GetxController {
     if (response.statusCode == 200) {
       var json = {
         "_id": messageData.id,
-        "fromId": messageData.fromId,
-        "toId": messageData.toId,
+        "from": messageData.from,
+        "to": messageData.to,
         "convsId": convsId,
         "convsType": convsType,
         "text": messageData.text,
@@ -173,7 +173,7 @@ class ConversationController extends GetxController {
         currentUserCount++;
       }
     }
-    if(currentUserCount>1){
+    //if(currentUserCount>1){
     var response = await dio.post(
       "https://nodejsrealtimechat.onrender.com/conversation/seenMessage?convsId=" + convsId,
      // "http://172.28.240.1:3000/conversation/seenMessage?convsId=" + convsId,
@@ -187,17 +187,22 @@ class ConversationController extends GetxController {
       notifyMessageSeen(socket, convsId, convsType, currentUserId);
 
     }
-    }
+   // }
   }
 
   void notifyMessageSeen(
       IO.Socket socket, String convsId, String convsType, String currentUserId) {
+
+
+    print("notify other client that MessageSeen called");
+
     var json = {"convsId": convsId,"convsType": convsType, "newUserId": currentUserId};
     socket.emit('notifyMessageSeen', json);
+
   }
 
   void getConversationByUserId(String userId) async {
-    conversations.clear();
+
 
     var header = {
       'Content-type': 'application/json; charset=utf-8',
@@ -210,6 +215,9 @@ class ConversationController extends GetxController {
     );
     if (response.statusCode == 200) {
       var result = response.data;
+
+
+      conversations.clear();
       for (int i = 0; i < result.length; i++) {
         Conversation conversation = Conversation.fromJson(result[i]);
         List<User> users = <User>[];
