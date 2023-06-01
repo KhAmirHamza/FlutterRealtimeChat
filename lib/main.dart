@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:realtime_chat/controller/ConvsCntlr.dart';
+import 'package:realtime_chat/controller/SocketController.dart';
 import 'package:realtime_chat/view/create_group.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:socket_io_client/socket_io_client.dart';
@@ -22,33 +23,19 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
 
-
   final convsController = Get.put(ConversationController());
 
 
-  Socket? socket;
+  Socket? socket ;
 
   @override
-  void initState() {
+  void initState(){
     super.initState();
-    connectToSocket();
+    SocketController socketController = SocketController();
+    socket =  socketController.getInstance();
+
   }
 
-
-  connectToSocket() {
-    if(socket!=null){ return; }
-      socket = io(
-          'https://nodejsrealtimechat.onrender.com/',
-          OptionBuilder()
-              .setTransports(['websocket']) // for Flutter or Dart VM
-              .disableAutoConnect() // disable auto-connection
-          //.setExtraHeaders({'foo': 'bar'}) // optional
-              .build());
-      socket!.connect();
-      socket!.on("connect", (data)  {
-        print("Connected: "+ socket!.id.toString());
-      });
-  }
 
   @override
   void dispose() {

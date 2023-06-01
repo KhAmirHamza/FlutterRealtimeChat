@@ -127,7 +127,9 @@ class _UserWidgetState extends State<UserWidget> {
     String title = "${widget.currentUser.name} - ${widget.selectedUser.name}";
 
     List<String> seenBy = <String>[];
+    List<String> receivedBy = <String>[];
     seenBy.add(widget.currentUser.id.toString());
+    receivedBy.add(widget.currentUser.id.toString());
 
     widget.messages.add(Message(
         id: "Initial",
@@ -135,6 +137,7 @@ class _UserWidgetState extends State<UserWidget> {
         to: "All",
         text: "Initial",
         seenBy: seenBy,
+        receivedBy: receivedBy,
         imageUrl:
             "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTKTSNwcT2YrRQJKGVQHClGtQgp1_x8kLd0Ig&usqp=CAU"));
     widget.users.add(widget.currentUser);

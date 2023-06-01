@@ -150,15 +150,12 @@ class _HomePageState extends State<HomePage> {
           onTap: (index) {
             setState(() {
               _page = index;
+              if(index!=0) widget.socket.clearListeners();
             });
           },
           letIndexChange: (index) => true,
-
-
 
         ),
         body: pages[_page]);
   }
 }
-
-

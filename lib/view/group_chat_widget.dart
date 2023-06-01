@@ -38,143 +38,7 @@ class GroupChatWidget extends StatefulWidget {
 }
 
 class _GroupChatWidgetState extends State<GroupChatWidget> {
-//   @override
-//   initState() {
-//     super.initState();
-//     print("widget.conversation.id:"+widget.convsController.conversations[widget.convsIndex].id.toString());
-// /*
-//     var messageList =
-//         widget.convsController.conversations[widget.convsIndex].messages;
-//
-//     if (!(messageList![messageList.length - 1]
-//         .seenBy!
-//         .contains(widget.currentUser.id!))) {
-//       print("Message Seen at Initial State");
-//
-//       String convsId =
-//       widget.convsController.conversations[widget.convsIndex].id.toString();
-//
-//       String convsType =
-//       widget.convsController.conversations[widget.convsIndex].type.toString();
-//       String messageId = widget
-//           .convsController
-//           .conversations[widget.convsIndex]
-//           .messages![widget.convsController.conversations[widget.convsIndex]
-//           .messages!.length -
-//           1]
-//           .id
-//           .toString();
-//
-//       widget.convsController.seenMessage(convsId, convsType, messageId, widget.socket, widget.currentUser.id!);
-//
-//     }*/
-//
-//    //  receiveMessage(); //Check if last message has not seen yet...
-//
-//   }
 
-  // receiveMessage() {
-  //   //Receive Message Seen Info
-  //
-  //   // String notifyMessageSeenEvent =
-  //   //     'notifyMessageSeen=${widget.convsController.conversations[convsIndex].id}';
-  //
-  //   String notifyMessageSeenEvent ="notifyMessageSeen?convsId=${widget.convsController.conversations[widget.convsIndex].id}&convsType=Group";
-  //
-  //
-  //   widget.socket.on(notifyMessageSeenEvent, (data)
-  //   {
-  //     print("Other User Has Seen Message: ");
-  //     var jsonMap = data as Map<String, dynamic>;
-  //
-  //     if (!widget
-  //         .convsController
-  //         .conversations[widget.convsIndex]
-  //         .messages![widget.convsController.conversations[widget.convsIndex]
-  //         .messages!.length -
-  //         1]
-  //         .seenBy!.contains(jsonMap['newUserId'])) {
-  //
-  //
-  //     widget
-  //         .convsController
-  //         .conversations[widget.convsIndex]
-  //         .messages![widget.convsController.conversations[widget.convsIndex]
-  //         .messages!.length -
-  //         1]
-  //         .seenBy!
-  //         .add(jsonMap['newUserId']);
-  //     widget.convsController.conversations.refresh();
-  //
-  //   }
-  //   });
-  //
-  //
-  //
-  //   Conversation convs = widget.convsController.conversations[widget.convsIndex];
-  //   String receiveMessageEvent = "receiveMessage?convsId=${convs.id}&convsType=Group";
-  //
-  //   //Receive Message from Server that actually sent by other Client.
-  //   widget.socket.on(receiveMessageEvent, (data) {
-  //
-  //
-  //     print("ReceiveMessageCalled");
-  //     print("widget.currentUser.id: "+widget.currentUser.id.toString());
-  //
-  //     var jsonMap = data as Map<String, dynamic>;
-  //
-  //     if(jsonMap['fromId']!=widget.currentUser.id!){
-  //
-  //
-  //     var seenByList = jsonMap['seenBy'].toList();
-  //
-  //     List<String> seenBy = <String>[];
-  //
-  //     for (var i = 0; i < seenByList.length; i++) {
-  //       //Convert And Reassign Existing SeenBy Data...
-  //       seenBy.add(seenByList[i]);
-  //       print("seenByList[${i}]"+seenByList[i].toString());
-  //
-  //     }
-  //
-  //     if (!(seenBy.contains(widget.currentUser.id!))) {
-  //       seenBy.add(widget.currentUser.id!);
-  //
-  //       widget.convsController.conversations[widget.convsIndex].messages!.add(
-  //           Message(
-  //               id: jsonMap['id'],
-  //               from: jsonMap['from'],
-  //               to: jsonMap['to'],
-  //               text: jsonMap['text'],
-  //               seenBy: seenBy,
-  //               imageUrl: jsonMap['imageUrl'],
-  //               createdAt: jsonMap['createdAt'],
-  //               updatedAt: jsonMap['updatedAt']));
-  //
-  //       String convsId = widget
-  //           .convsController.conversations[widget.convsIndex].id
-  //           .toString();
-  //
-  //       String convsType = widget
-  //           .convsController.conversations[widget.convsIndex].type
-  //           .toString();
-  //
-  //       String messageId = widget
-  //           .convsController
-  //           .conversations[widget.convsIndex]
-  //           .messages![widget.convsController.conversations[widget.convsIndex]
-  //           .messages!.length -
-  //           1]
-  //           .id
-  //           .toString();
-  //
-  //       widget.convsController.seenMessage(convsId, convsType, messageId, widget.socket, widget.currentUser.id!);
-  //       print(jsonMap);
-  //     }
-  //   }
-  //
-  //   });
-  // }
 
   @override
   Widget build(BuildContext context) {
@@ -193,7 +57,7 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
           ),
             actions: <Widget>[
               IconButton(
-                icon: const Icon(Icons.call, color: Colors.black,),
+                icon: const Icon(Icons.call_outlined, color: Colors.black,),
                 tooltip: 'Call Now',
                 onPressed: () {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -495,7 +359,7 @@ sendMessage(
   );
 
   convsController.sendMessage(
-      convsController.conversations[convsIndex].id!,convsController.conversations[convsIndex].type!, message, convsIndex, socket);
+      convsController.conversations[convsIndex].id!,convsController.conversations[convsIndex].type!, message, convsIndex);
 
 }
 

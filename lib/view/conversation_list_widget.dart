@@ -18,6 +18,8 @@ import 'p_to_p_chat_page.dart';
 
 var selectedUsers = <User>[];
 
+
+
 class ConversationListWidget extends StatefulWidget {
 
   User currentUser;
@@ -50,15 +52,14 @@ class _ConversationListWidgetState extends State<ConversationListWidget> {
     super.dispose();
   }
 
+  bool openMessage = false;
+
   @override
   Widget build(BuildContext context) {
 
 
 
-
-
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
-
 
       widget.convsController.getConversationByUserId(widget.currentUser.id!);
 
@@ -94,126 +95,13 @@ class _ConversationListWidgetState extends State<ConversationListWidget> {
 
 
 
+      setUpPersonToPersonMessagingRealTimeListeners();
+      setUpGroupMessagingRealTimeListeners();
 
 
-      //String receiveMessageEvent = "receiveMessage?convsId=${convs.id}&convsType=Single";
-      String receiveMessageEvent = "receiveMessage?convsType=Single";
-
-      widget.socket.on(receiveMessageEvent, (data) {
-        print("Receive Message Called");
-
-
-        var jsonMap = data as Map<String, dynamic>;
-        User user = User.fromJson(jsonMap['from']);
-
-        print("jsonMap");
-        print(jsonMap);
-        print("user.name");
-        print(user.name);
-        print(" currentUser.id!");
-        print( widget.currentUser.id!);
-
-        if (user.id!=  widget.currentUser.id!) {
-
-          var seenByList = jsonMap['seenBy'].toList();
-
-          List<String> seenBy = <String>[];
-          for (var i = 0; i < seenByList.length; i++) {
-            //Convert And Reasign Existing SeenBy Data...
-            seenBy.add(seenByList[i]);
-          }
-
-          print(" currentUser.id:${ widget.currentUser.id}");
-          print("seenBy.length pre:${seenBy.length}");
-
-
-          int convsIndex = 0;
-          for(int i=0; i< widget.convsController.conversations.length; i++){
-            if(widget.convsController.conversations[i].id == jsonMap['convsId']) {
-              convsIndex = i;
-              break;
-            }
-          }
-
-          if (!(seenBy.contains( widget.currentUser.id!))) {
-            seenBy.add( widget.currentUser.id!);
-            print("seenBy.length post:${seenBy.length}");
-
-            widget.convsController.conversations[ convsIndex].messages!.add(
-                Message(
-                    id: jsonMap['id'],
-                    from: User.fromJson(jsonMap['from']),
-                    to: jsonMap['to'],
-                    text: jsonMap['text'],
-                    seenBy: seenBy,
-                    imageUrl: jsonMap['imageUrl'],
-                    createdAt: jsonMap['createdAt'],
-                    updatedAt: jsonMap['updatedAt']));
-
-          /*  String convsId = convsController.conversations[ convsIndex].id
-                .toString();
-            String convsType = convsController.conversations[ convsIndex].type
-                .toString();
-
-            String messageId = convsController
-                .conversations[ convsIndex]
-                .messages![ convsController.conversations[ convsIndex]
-                .messages!.length -
-                1]
-                .id
-                .toString();*/
-             widget.convsController.seenMessage(
-                 jsonMap['convsId'], jsonMap['convsType'], jsonMap['id'],  widget.socket,
-                 widget.currentUser.id!);
-            print(jsonMap);
-
-            widget.convsController.conversations.refresh();
-
-          }
-        }
-      });
-
-        // String notifyMessageSeenEvent ="notifyMessageSeen?convsId=${widget.convsController.conversations[widget.convsIndex].id}&convsType=Group";
-         String notifyMessageSeenEvent ="notifyMessageSeen?convsType=Single";
-
-        widget.socket.on(notifyMessageSeenEvent, (data)
-        {
-          var jsonMap = data as Map<String, dynamic>;
-          print("Other User Has Seen Message: "+jsonMap.toString());
-
-          int convsIndex = 0;
-          for(int i=0; i< widget.convsController.conversations.length; i++){
-            if(widget.convsController.conversations[i].id == jsonMap['convsId']) {
-              convsIndex = i;
-              break;
-            }
-          }
-
-          if (!widget
-              .convsController
-              .conversations[convsIndex]
-              .messages![widget.convsController.conversations[convsIndex]
-              .messages!.length -
-              1]
-              .seenBy!.contains(jsonMap['newUserId'])) {
-
-
-          widget
-              .convsController
-              .conversations[convsIndex]
-              .messages![widget.convsController.conversations[convsIndex]
-              .messages!.length -
-              1]
-              .seenBy!
-              .add(jsonMap['newUserId']);
-          widget.convsController.conversations.refresh();
-
-        }
-        });
     });
 
     TextEditingController searchContactController = TextEditingController();
-
 
 
 
@@ -371,14 +259,14 @@ class _ConversationListWidgetState extends State<ConversationListWidget> {
                   return ListView.builder(
                     itemCount: controller.conversations.length,
                     itemBuilder: (context, index) {
-                      return
+                      return controller.conversations.length>0?
                         ConversationItemWidget(
                           widget.convsController,
                           widget.userController,
                           widget.convsController.conversations[index],
                           widget.currentUser,
                           widget.socket,
-                          index);
+                          index): null;
                     },
                   );
                 },
@@ -416,6 +304,137 @@ class _ConversationListWidgetState extends State<ConversationListWidget> {
 
     );
   }
+
+  void setUpPersonToPersonMessagingRealTimeListeners() {
+    String notifyMessageSendEvent = "notifyMessageSend?convsType=Single";
+    widget.socket.on(notifyMessageSendEvent, (data) {
+      widget.convsController.onMessageSend(widget.socket, data, widget.currentUser);
+      pToP_ChatPage(widget.convsController, widget.currentUser,
+          widget.currentUser, widget.socket, 0,widget.userController) //Fake Data
+          .onMessageSend();
+    });
+}
+
+  void setUpGroupMessagingRealTimeListeners() {
+
+
+    //String receiveMessageEvent = "receiveMessage?convsId=${convs.id}&convsType=Single";
+    String receiveMessageEvent = "receiveMessage?convsType=Group";
+
+
+    widget.socket.on(receiveMessageEvent, (data) {
+      print("Receive Message Called");
+
+      var jsonMap = data as Map<String, dynamic>;
+      User user = User.fromJson(jsonMap['from']);
+
+      print("jsonMap");
+      print(jsonMap);
+      print("user.name");
+      print(user.name);
+      print(" currentUser.id!");
+      print( widget.currentUser.id!);
+
+      if (user.id!=  widget.currentUser.id!) {
+
+        var seenByList = jsonMap['seenBy'].toList();
+
+        List<String> seenBy = <String>[];
+        for (var i = 0; i < seenByList.length; i++) {
+          //Convert And Reasign Existing SeenBy Data...
+          seenBy.add(seenByList[i]);
+        }
+
+        var receivedByList = jsonMap['receivedBy'].toList();
+
+        List<String> receivedBy = <String>[];
+        for (var i = 0; i < seenByList.length; i++) {
+          //Convert And Reasign Existing SeenBy Data...
+          receivedBy.add(receivedByList[i]);
+        }
+
+        print(" currentUser.id:${ widget.currentUser.id}");
+        print("receivedBy.length pre:${seenBy.length}");
+
+
+        int convsIndex = 0;
+        for(int i=0; i< widget.convsController.conversations.length; i++){
+          if(widget.convsController.conversations[i].id == jsonMap['convsId']) {
+            convsIndex = i;
+            break;
+          }
+        }
+
+        if (!(receivedBy.contains( widget.currentUser.id!))) {
+          receivedBy.add( widget.currentUser.id!);
+          print("seenBy.length post:${seenBy.length}");
+
+          widget.convsController.conversations[ convsIndex].messages!.add(
+              Message(
+                  id: jsonMap['id'],
+                  from: User.fromJson(jsonMap['from']),
+                  to: jsonMap['to'],
+                  text: jsonMap['text'],
+                  seenBy: seenBy,
+                  receivedBy: receivedBy,
+                  imageUrl: jsonMap['imageUrl'],
+                  createdAt: jsonMap['createdAt'],
+                  updatedAt: jsonMap['updatedAt']));
+
+          if(openMessage){
+            widget.convsController.receivedMessage(
+                jsonMap['convsId'], jsonMap['convsType'], jsonMap['id'],  widget.socket,
+                widget.currentUser.id!);
+            print(jsonMap);
+          }
+
+          widget.convsController.conversations.refresh();
+
+        }
+      }
+    });
+
+    // String notifyMessageSeenEvent ="notifyMessageSeen?convsId=${widget.convsController.conversations[widget.convsIndex].id}&convsType=Group";
+    String notifyMessageSeenEvent ="notifyMessageSeen?convsType=Group";
+
+    widget.socket.on(notifyMessageSeenEvent, (data)
+    {
+
+
+
+      var jsonMap = data as Map<String, dynamic>;
+      print("Other User Has Seen Message: "+jsonMap.toString());
+
+      int convsIndex = 0;
+      for(int i=0; i< widget.convsController.conversations.length; i++){
+        if(widget.convsController.conversations[i].id == jsonMap['convsId']) {
+          convsIndex = i;
+          break;
+        }
+      }
+
+      if (!widget
+          .convsController
+          .conversations[convsIndex]
+          .messages![widget.convsController.conversations[convsIndex]
+          .messages!.length -
+          1]
+          .seenBy!.contains(jsonMap['newUserId'])) {
+
+
+        widget
+            .convsController
+            .conversations[convsIndex]
+            .messages![widget.convsController.conversations[convsIndex]
+            .messages!.length -
+            1]
+            .seenBy!
+            .add(jsonMap['newUserId']);
+        widget.convsController.conversations.refresh();
+
+      }
+    });
+  }
 }
 
 
@@ -439,10 +458,14 @@ class _ConversationItemWidgetState extends State<ConversationItemWidget> {
 
   @override
   Widget build(BuildContext context) {
+
     var otherUserActiveStatus =
     widget.conversation.users![0].id == widget.currentUser.id
         ? widget.conversation.users![1].status
         : widget.conversation.users![0].status;
+
+
+
 
     Message message = widget.conversation
         .messages![widget.conversation.messages!.length - 1];
@@ -465,8 +488,19 @@ class _ConversationItemWidgetState extends State<ConversationItemWidget> {
         elevation: 2,
 
         child: InkWell(
-          onTap: () => {
-             print("widget.conversation.id:"+widget.convsController.conversations[widget.index].id.toString()),
+          onTap: () {
+             print("widget.conversation.id:"+widget.convsController.conversations[widget.index].id.toString());
+
+
+
+             Navigator.of(context).pushAndRemoveUntil(
+                 MaterialPageRoute(
+                     builder: (context) => CreateGroupWidget(
+                         widget.userController,
+                         widget.convsController,
+                         widget.currentUser,
+                         widget.socket)),
+                     (Route<dynamic> route) => true);
 
             Navigator.push(
                 context,
@@ -480,13 +514,14 @@ class _ConversationItemWidgetState extends State<ConversationItemWidget> {
                         widget.currentUser,
                         selectedUser,
                         widget.socket,
-                        widget.index)
+                        widget.index, widget.userController)
 
-                ))
+                ));
           },
           child: Container(
             margin: EdgeInsets.fromLTRB(10, 5, 10, 5),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
                   decoration: BoxDecoration(
@@ -545,31 +580,34 @@ class _ConversationItemWidgetState extends State<ConversationItemWidget> {
                           style: TextStyle(fontSize: 10, color: Colors.grey),
                         ),
                       ),
-                      Container(
-                        alignment: Alignment.bottomRight,
-                        margin: EdgeInsets.only(top: 10),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            Container(
-                                margin: EdgeInsets.only(right: 5),
-                                child: Text(otherUserActiveStatus.toString(), style: TextStyle(
-                                  color: otherUserActiveStatus != "Online"
-                                      ? Colors.grey
-                                      : Colors.green,
-                                  fontSize: 10
-                                ),)),
+                      Visibility(
+                        visible: widget.conversation.type=="Group"? false: true,
+                        child: Container(
+                          alignment: Alignment.bottomRight,
+                          margin: EdgeInsets.only(top: 17),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              Container(
+                                  margin: EdgeInsets.only(right: 5),
+                                  child: Text(otherUserActiveStatus.toString(), style: TextStyle(
+                                    color: otherUserActiveStatus != "Online"
+                                        ? Colors.grey
+                                        : Colors.green,
+                                    fontSize: 10
+                                  ),)),
 
-                            SizedBox(
-                              width: 10,
-                              height: 10,
-                              child: CircleAvatar(
-                                  backgroundColor:
-                                  otherUserActiveStatus != "Online"
-                                      ? Colors.grey
-                                      : Colors.green),
-                            ),
-                          ],
+                              SizedBox(
+                                width: 10,
+                                height: 10,
+                                child: CircleAvatar(
+                                    backgroundColor:
+                                    otherUserActiveStatus != "Online"
+                                        ? Colors.grey
+                                        : Colors.green),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ],
@@ -694,6 +732,8 @@ class _ConversationItemWidgetState extends State<ConversationItemWidget> {
                         print("Submit Clicked!");
                         List<String> seenBy = <String>[];
                         seenBy.add(currentUser.id.toString());
+                        List<String> receivedBy = <String>[];
+                        receivedBy.add(currentUser.id.toString());
 
                         messages.add(Message(
                             id: "Initial",
@@ -701,6 +741,7 @@ class _ConversationItemWidgetState extends State<ConversationItemWidget> {
                             to: "Initial",
                             text: "Initial",
                             seenBy: seenBy,
+                            receivedBy: receivedBy,
                             imageUrl:
                             "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTKTSNwcT2YrRQJKGVQHClGtQgp1_x8kLd0Ig&usqp=CAU"));
 

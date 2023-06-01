@@ -42,6 +42,9 @@ dependencies:
   mime: ^1.0.4
   video_player: ^2.6.1
   flutter_speed_dial: ^3.0.5
+  flutter_emoji: ">= 2.0.0"
+  emoji_picker_flutter: ^1.5.4
+
 
 
 dev_dependencies:

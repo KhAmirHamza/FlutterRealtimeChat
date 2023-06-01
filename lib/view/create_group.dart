@@ -576,12 +576,16 @@ void showCustomDialog(
                       List<String> seenBy = <String>[];
                       seenBy.add(currentUser.id.toString());
 
+                      List<String> receivedBy = <String>[];
+                      receivedBy.add(currentUser.id.toString());
+
                       messages.add(Message(
                           id: "Initial",
                           from: currentUser,
                           to: "Initial",
                           text: "Initial",
                           seenBy: seenBy,
+                          receivedBy: receivedBy,
                           imageUrl:
                               "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTKTSNwcT2YrRQJKGVQHClGtQgp1_x8kLd0Ig&usqp=CAU"));
 
