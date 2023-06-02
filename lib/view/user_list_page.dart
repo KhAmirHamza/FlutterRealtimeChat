@@ -131,6 +131,8 @@ class _UserWidgetState extends State<UserWidget> {
     seenBy.add(widget.currentUser.id.toString());
     receivedBy.add(widget.currentUser.id.toString());
 
+    List<React> reacts = <React>[];
+
     widget.messages.add(Message(
         id: "Initial",
         from: widget.currentUser,
@@ -139,7 +141,11 @@ class _UserWidgetState extends State<UserWidget> {
         seenBy: seenBy,
         receivedBy: receivedBy,
         imageUrl:
-            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTKTSNwcT2YrRQJKGVQHClGtQgp1_x8kLd0Ig&usqp=CAU"));
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTKTSNwcT2YrRQJKGVQHClGtQgp1_x8kLd0Ig&usqp=CAU",
+      reacts: reacts,
+    ),
+    );
+
     widget.users.add(widget.currentUser);
     widget.users.add(widget.selectedUser);
 

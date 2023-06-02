@@ -128,6 +128,30 @@ class ConversationController extends GetxController implements SocketListeners{
     socketController.notifyMessageSend(convsId, convsType, message, conversationIndex, this);
   }
 
+  addReactUpdateConvs(int convsIndex, int messageIndex, String convsId, String convsType, String messageId, String reactTitle, IO.Socket socket, String currentUserId) async {
+    var header = {
+      'Content-type': 'application/json; charset=utf-8',
+      'Accept': 'application/json'
+    };
+
+      var response = await dio.post(
+        "https://nodejsrealtimechat.onrender.com/conversation/reactMessage?convsId=" + convsId,
+        data: jsonEncode(<String, dynamic>{
+          'messageId': messageId,
+          "reactTitle": reactTitle,
+          "currentUserId": currentUserId,
+        }),
+        options: Options(headers: header),
+      );
+      if (response.statusCode == 200) {
+        React react = React(title: reactTitle, userId: currentUserId);
+
+        socketController.notifyNewReactAdded(convsId, messageId, convsType, reactTitle, currentUserId);
+        conversations[convsIndex].messages![messageIndex].reacts!.add(react);
+        conversations.refresh();
+      }
+  }
+
 
   receivedMessage(String convsId, String convsType, String messageId, IO.Socket socket, String currentUserId) async {
     var header = {
@@ -265,12 +289,19 @@ class ConversationController extends GetxController implements SocketListeners{
 
     if (user.id!=  currentUser.id!) {
       var receivedByList = jsonMap['receivedBy'].toList();
+      var reactList = jsonMap['reacts'].toList();
       List<String> seenBy = <String>[];
       List<String> receivedBy = <String>[];
+      List<React> reacts = <React>[];
 
       for (var i = 0; i < receivedByList.length; i++) {
         //Convert And Reasign Existing SeenBy Data...
         receivedBy.add(receivedByList[i]);
+      }
+
+      for (var i = 0; i < reacts.length; i++) {
+        //Convert And Reasign Existing SeenBy Data...
+        reacts.add(reacts[i]);
       }
 
       int convsIndex = 0;
@@ -290,6 +321,7 @@ class ConversationController extends GetxController implements SocketListeners{
           seenBy: seenBy,
           receivedBy: receivedBy,
           imageUrl: jsonMap['imageUrl'],
+          reacts: reacts,
           createdAt: jsonMap['createdAt'],
           updatedAt: jsonMap['updatedAt']);
 
@@ -309,5 +341,43 @@ class ConversationController extends GetxController implements SocketListeners{
 
     }
 
+  }
+
+  @override
+  void onNewReactAdded(IO.Socket socket, data) {
+    // TODO: implement onNewReactAdded
+    var jsonMap = data as Map<String, dynamic>;
+    print("A User Has Reacted into the Message: "+jsonMap.toString());
+
+    int convsIndex = 0;
+    for(int i=0; i< conversations.length; i++){
+      if(conversations[i].id == jsonMap['convsId']) {
+        convsIndex = i;
+        break;
+      }
+    }
+    React react = React(title: jsonMap['reactTitle'], userId: jsonMap['newUserId']);
+    int messageIndex = 0;
+    for(int i =0; i<conversations[convsIndex].messages!.length; i++){
+      if(conversations[convsIndex].messages![i].id==jsonMap['messageId']){
+        messageIndex = i;
+        break;
+      }
+    }
+
+    if (!conversations[convsIndex]
+        .messages![messageIndex]
+        .reacts!.contains(react)) {
+
+      conversations[convsIndex]
+          .messages![messageIndex]
+          .reacts!
+          .add(react);
+      print("now react data: "+conversations[convsIndex]
+          .messages![messageIndex]
+          .reacts!.length.toString());
+
+      conversations.refresh();
+    }
   }
 }

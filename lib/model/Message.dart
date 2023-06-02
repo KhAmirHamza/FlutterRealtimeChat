@@ -8,10 +8,11 @@ class Message {
   List<String>? seenBy;
   List<String>? receivedBy;
   String? imageUrl;
+  List<React>? reacts;
   String? createdAt;
   String? updatedAt;
 
-  Message({this.id, this.from, this.to, this.text, this.seenBy, this.receivedBy, this.imageUrl, this.createdAt, this.updatedAt});
+  Message({this.id, this.from, this.to, this.text, this.seenBy, this.receivedBy, this.imageUrl, this.reacts, this.createdAt, this.updatedAt});
 
   Message.fromJson(Map<String, dynamic> json) {
     id = json['_id'];
@@ -21,6 +22,12 @@ class Message {
     seenBy = json['seenBy'].cast<String>();
     receivedBy = json['receivedBy'].cast<String>();
     imageUrl = json['imageUrl'];
+    if (json['reacts'] != null) {
+      reacts = <React>[];
+      json['reacts'].forEach((v) {
+        reacts!.add(new React.fromJson(v));
+      });
+    }
     createdAt = json['createdAt'];
     updatedAt = json['updatedAt'];
   }
@@ -36,11 +43,38 @@ class Message {
     data['seenBy'] = this.seenBy;
     data['receivedBy'] = this.receivedBy;
     data['imageUrl'] = this.imageUrl;
+    if (this.reacts != null) {
+      data['reacts'] = this.reacts!.map((v) => v.toJson()).toList();
+    }
     data['createdAt'] = this.createdAt;
     data['updatedAt'] = this.updatedAt;
     return data;
   }
 }
+
+
+
+class React {
+  String? title;
+  String? userId;
+
+  React({this.title, this.userId});
+
+  React.fromJson(Map<String, dynamic> json) {
+    title = json['title'];
+    userId = json['userId'];
+  }
+
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> data = new Map<String, dynamic>();
+    data['title'] = this.title;
+    data['userId'] = this.userId;
+    return data;
+  }
+}
+
+
+
 
 //
 // class From {

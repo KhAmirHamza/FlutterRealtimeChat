@@ -23,12 +23,13 @@ import 'package:realtime_chat/view/typing_indicator.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:http_parser/http_parser.dart';
 import 'package:get/get.dart' hide Response, FormData, MultipartFile;
-
+import 'package:lottie/lottie.dart';
 import 'package:dio/src/multipart_file.dart' as MultipartFile;
 
 import 'package:http/http.dart' as http;
 
 import '../model/Conversation.dart';
+import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 
 
 bool isChatting = true;
@@ -47,7 +48,6 @@ class pToP_ChatPage extends StatefulWidget  implements OnMessageSend{
   pToP_ChatPage(
       this.convsController, this.currentUser, this.selectedUser, this.socket, this.convsIndex, this.userController,
       {super.key});
-
 
 
   @override
@@ -73,13 +73,10 @@ class pToP_ChatPage extends StatefulWidget  implements OnMessageSend{
         Conversation conversation = convsController.conversations[convsIndex];
 
         if(isChatting){
-          convsController.seenMessage(
-              convsController.conversations[convsIndex].id!,
-              convsController.conversations[convsIndex].type!,
-              conversation.messages![conversation.messages!.length-1].id!,
-              socket, currentUser.id!);
+          convsController.seenMessage(conversation.id!,conversation.type!,
+              message.id!, socket, currentUser.id!);
 
-         // convsController.conversations.refresh();
+          convsController.conversations.refresh();
         }
     //  }
     });
@@ -368,21 +365,17 @@ class _MessageListWidgetState extends State<MessageListWidget> {
                   ), visible: !hasMessagesAtSameDay,),
 
 
-                  item.from!.id == widget.currentUser.id? ChatBubble(
-                      item: item,
-                      isCurrentUser: true,
+                  ChatBubble(
+                      messageIndex: reversedIndex,
+                      convsIndex: widget.convsIndex,
+                      isCurrentUser: item.from!.id == widget.currentUser.id,
                       hasSeen: hasSeen,
                       hasReceived: hasReceived,
-                      isLastSendMessage: isLastSendMessage) : ChatBubble(
-                      item: item,
-                      isCurrentUser: false,
-                      hasSeen: hasSeen,
-                      hasReceived: hasReceived,
-                      isLastSendMessage: isLastSendMessage)
-
+                      isLastSendMessage: isLastSendMessage,
+                      convsController: widget.convsController,
+                      socket: widget.socket,
+                      currentUser: widget.currentUser)
                 ],);
-
-
               },
             );
           },
@@ -407,82 +400,431 @@ int getLastSendMessageIndex(String currentUserId, List<Message> items) {
   return result;
 }
 
-class ChatBubble extends StatelessWidget {
+class ChatBubble extends StatefulWidget {
   const ChatBubble({
     Key? key,
-    required this.item,
+    required this.messageIndex,
+    required this.convsIndex,
     required this.isCurrentUser,
     required this.hasSeen,
     required this.hasReceived,
     required this.isLastSendMessage,
+    required this.convsController,
+    required this.socket,
+    required this.currentUser,
   }) : super(key: key);
-  final Message item;
+  final int messageIndex;
+  final int convsIndex;
   final bool isCurrentUser;
   final bool hasSeen;
   final bool hasReceived;
   final bool isLastSendMessage;
+  final ConversationController convsController;
+  final IO.Socket socket;
+  final User currentUser;
+
+  @override
+  State<ChatBubble> createState() => _ChatBubbleState();
+}
+
+class _ChatBubbleState extends State<ChatBubble> {
+
+  Offset _tapPosition = Offset.zero;
+
+  void _getTapPosition(TapDownDetails tapPosition) {
+
+    final RenderBox referenceBox = context.findRenderObject() as RenderBox;
+
+    setState(() {
+      _tapPosition = referenceBox.globalToLocal(tapPosition.globalPosition);
+      print(_tapPosition);
+    });
+  }
+
+  // void _showContextMenu(BuildContext context) async {
+  //   final RenderObject? overlay =
+  //   Overlay.of(context)?.context.findRenderObject();
+  //   final result = await showMenu(
+  //       context: context,
+  //       position: RelativeRect.fromRect(
+  //           Rect.fromLTWH(_tapPosition.dx, _tapPosition.dy, 100, 100),
+  //           Rect.fromLTWH(0, 0, overlay!.paintBounds.size.width,
+  //               overlay!.paintBounds.size.height)),
+  //       items: [
+  //         const PopupMenuItem(
+  //           child: Text('Add Me'),
+  //           value: "fav",
+  //         ),
+  //         const PopupMenuItem(
+  //           child: Text('Close'),
+  //           value: "close",
+  //         )
+  //       ]);
+  //   // perform action on selected menu item
+  //   switch (result) {
+  //     case 'fav':
+  //       print("fav");
+  //       break;
+  //     case 'close':
+  //       print('close');
+  //       Navigator.pop(context);
+  //       break;
+  //   }
+  // }
+
+
 
   @override
   Widget build(BuildContext context) {
 
 
-    Message message = item;
 
 
-    return Padding(
-      // add some padding
-      padding: EdgeInsets.fromLTRB(
-        isCurrentUser ? 64.0 : 16.0,
-        4,
-        isCurrentUser ? 16.0 : 64.0,
-        4,
-      ),
-      child: Column(children: [
-        Align(
-          // align the child within the container
-            alignment:
-            isCurrentUser ? Alignment.centerRight : Alignment.centerLeft,
-            child: Column(children: [
+    Message message = widget.convsController.conversations[widget.convsIndex].messages![widget.messageIndex];
+    var x, y;
 
-              DecoratedBox(
-                // chat bubble decoration
-                  decoration: BoxDecoration(
+    _onTapDown(TapDownDetails details) {
+      x = details.globalPosition.dx;
+      y = details.globalPosition.dy;
+      // or user the local position method to get the offset
+      print(details.localPosition);
+      print("tap down " + x.toString() + ", " + y.toString());
+    }
 
-                    color: isCurrentUser ? Colors.blue : Colors.grey[300],
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Column(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: (message.imageUrl != null &&
-                            message.imageUrl!.length > 0)
-                            ? Image.network(message.imageUrl.toString())
-                            : Text(
-                          message.text.toString(),
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodyText1!
-                              .copyWith(
-                              color: isCurrentUser
-                                  ? Colors.white
-                                  : Colors.black87),
-                        ),
-                      ),
-                    ],
-                  )),
-            ],)
+    _onTapUp(TapUpDetails details) {
+      x = details.globalPosition.dx;
+      y = details.globalPosition.dy;
+      // or user the local position method to get the offset
+      print(details.localPosition);
+      print("tap up " + x.toString() + ", " + y.toString());
+    }
 
-        ),
-        Visibility(
-          visible: isLastSendMessage,
-          child: Container(
-            alignment: Alignment.bottomRight,
-            margin: EdgeInsets.fromLTRB(0, 5, 0, 0),
-            child: Text(hasSeen ? "Seen" : hasReceived? "Received" : "Unseen"),
+    void _showPopUpMenuAtPosition(var x, var y, bool isCurrentUser) async {
+      final RenderObject? overlay =
+      Overlay.of(context).context.findRenderObject();
+
+
+
+      final result = await showMenu(
+          context: context,
+          clipBehavior: Clip.hardEdge,
+
+          shadowColor: Colors.transparent,
+
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(25.0)
+            ,
           ),
-        )
-      ]),
+          color: Colors.transparent,
+          position: RelativeRect.fromRect(
+              Rect.fromLTWH(x, y, 100, 100),
+              Rect.fromLTWH(0, 0, overlay!.paintBounds.size.width,
+                  overlay.paintBounds.size.height)),
+
+          items: [
+            PopupMenuItem(
+              padding: EdgeInsets.symmetric(vertical: 7),
+              value: "fav",
+
+              child: AnimatedContainer(
+                width: 250,
+                padding: EdgeInsets.all(5),
+                duration: const Duration(milliseconds: 1000),
+                // Provide an optional curve to make the animation feel smoother.
+                decoration: BoxDecoration(
+
+                 // boxShadow: [BoxShadow(color: Colors.grey)],
+                  image: DecorationImage(
+                    image: isCurrentUser? AssetImage('assets/chat_box_right.png') : AssetImage('assets/chat_box_left.png'),
+                    fit: BoxFit.fill,
+                  ),
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                curve: Curves.fastOutSlowIn,
+
+                child: Row( children: [
+                  Container(
+                    margin: const EdgeInsets.fromLTRB(5,10,0,0),
+                  //  padding: EdgeInsets.all(2),
+                    height: 40,
+                    width: 40,
+                    child: FloatingActionButton(
+                        heroTag: 'btn1',
+                        tooltip:
+                        'Secret Chat',
+                        backgroundColor: Colors.transparent,
+                        foregroundColor: Colors.white ,
+                        splashColor: Colors.blue,
+                        elevation: 0,
+
+                        child:  Container(
+                          decoration: BoxDecoration(
+                              color: Colors.blue,
+                              borderRadius: BorderRadius.circular(25)
+                          ),
+                         // padding: EdgeInsets.all(2.5),
+                          child: ClipOval(
+                            child: Image.network(
+                              'https://www.gifcen.com/wp-content/uploads/2022/05/thumbs-up-gif-7.gif',
+                              width: 30,
+                              height: 30,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                        onPressed: (){
+
+      //React react = React(title: "like", userId: widget.currentUser.id);
+     // if(!widget.convsController.conversations[widget.convsIndex].messages![widget.messageIndex].reacts!.contains(react)) {
+
+        List<React> reacts = widget.convsController.conversations[widget.convsIndex].messages![widget.messageIndex].reacts!;
+
+       // React r = reacts.firstWhere((it) => it.userId == widget.currentUser.id);
+
+
+      if (!reacts.any((item) => item.userId == widget.currentUser.id)) {
+
+        widget.convsController.addReactUpdateConvs(
+            widget.convsIndex,
+            widget.messageIndex,
+            widget.convsController.conversations[widget.convsIndex].id!,
+            widget.convsController.conversations[widget.convsIndex].type!,
+            message.id!,
+            "like",
+            widget.socket,
+            widget.currentUser.id!);
+
+
+
+
+                   //     }
+      }
+        Navigator.pop(context);
+                        }
+                    ),
+
+                  ),
+                  Container(
+                    margin: const EdgeInsets.fromLTRB(5,10,0,0),
+                 //   padding: EdgeInsets.all(2),
+                    height: 40,
+                    width: 40,
+                    child: FloatingActionButton(
+                        heroTag: 'btn1',
+                        tooltip:
+                        'Secret Chat',
+                        backgroundColor: Colors.transparent,
+                        foregroundColor: Colors.white ,
+                        splashColor: Colors.blueAccent,
+                        elevation: 0,
+
+                        child:  Container(
+                          decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(25)
+                          ),
+                          child: ClipOval(
+                            child: Image.network(
+                              'https://cdn.pixabay.com/animation/2022/10/28/19/23/19-23-08-315_512.gif',
+                              fit: BoxFit.fitHeight,
+                              width: 30,
+                              height: 30,
+                            ),
+                          ),
+                        ),
+
+                        onPressed: (){
+                          Navigator.pop(context);
+                        }),
+                  ),
+                  Container(
+                    margin: const EdgeInsets.fromLTRB(5,10,0,0),
+                    height: 40,
+                    width: 40,
+                    child: FloatingActionButton(
+                        heroTag: 'btn1',
+                        tooltip:
+                        'Secret Chat',
+                        backgroundColor: Colors.transparent,
+                        foregroundColor: Colors.white ,
+                        splashColor: Colors.blueAccent,
+                        elevation: 0,
+
+                        child:  Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(25)
+                            ),
+                           // padding: EdgeInsets.all(2.5),
+                            child: ClipOval(
+                              child: Image.network(
+                                'https://gifdb.com/images/high/cute-finger-heart-hop7csjnvi37i29e.gif',
+                                width: 30,
+                                height: 30,
+                                fit: BoxFit.fitHeight,
+                              ),
+                            ),
+                        ),
+
+                        onPressed: (){
+                          Navigator.pop(context);
+                        }),
+                  ),
+                  Container(
+                    margin: const EdgeInsets.fromLTRB(5,10,0,0),
+                    height: 40,
+                    width: 40,
+                    child: FloatingActionButton(
+                        heroTag: 'btn1',
+                        tooltip:
+                        'Secret Chat',
+                        backgroundColor: Colors.transparent,
+                        foregroundColor: Colors.white ,
+                        splashColor: Colors.blueAccent,
+                        elevation: 0,
+
+                        child:  Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(25)
+                            ),
+                           // padding: EdgeInsets.all(2.5),
+                            child: ClipOval(
+                              child: Image.network(
+                                'https://i.pinimg.com/originals/b8/fe/79/b8fe7956472296b40f3ce7a7e7d68108.gif',
+                                width: 30,
+                                height: 30,
+                                fit: BoxFit.fitHeight,
+                              ),
+                            ),
+                        ),
+
+                        onPressed: (){
+                          Navigator.pop(context);
+                        }),
+                  ),
+                  Container(
+                    margin: const EdgeInsets.fromLTRB(0,10,5,0),
+                    height: 40,
+                    width: 40,
+                    child: FloatingActionButton(
+                        heroTag: 'btn1',
+                        tooltip:
+                        'Secret Chat',
+                        backgroundColor: Colors.transparent,
+                        foregroundColor: Colors.white ,
+                        splashColor: Colors.blueAccent,
+                        elevation: 0,
+
+                        child:  Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(25)
+                            ),
+                           // padding: EdgeInsets.all(2.5),
+                            child: ClipOval(
+                              child: Image.network(
+                                'https://media.tenor.com/l5_u4JytFLYAAAAC/wow-emoji.gif',
+                                width: 30,
+                                height: 30,
+                                fit: BoxFit.fitHeight,
+                              ),
+                            ),
+                        ),
+
+                        onPressed: (){
+                          Navigator.pop(context);
+                        }),
+                  ),
+
+
+                ],),
+              ),
+            )
+          ]);
+      // perform action on selected menu item
+      switch (result) {
+        case 'fav':
+          print("fav");
+          break;
+        case 'close':
+          print('close');
+          Navigator.pop(context);
+          break;
+      }
+    }
+
+
+
+    return GestureDetector(
+     // onTapDown: (position) => {_getTapPosition(position)},
+      onTapDown: (TapDownDetails details) => _onTapDown(details),
+      onTapUp: (TapUpDetails details) => _onTapUp(details),
+      onLongPress: () => {
+        //_showContextMenu(context)
+        _showPopUpMenuAtPosition(x,y, widget.isCurrentUser)
+      },
+      onDoubleTap: () => {
+        //_showContextMenu(context)
+      _showPopUpMenuAtPosition(x,y, widget.isCurrentUser)
+      },
+
+
+      child: Padding(
+        // add some padding
+        padding: EdgeInsets.fromLTRB(
+          widget.isCurrentUser ? 64.0 : 16.0,
+          4,
+          widget.isCurrentUser ? 16.0 : 64.0,
+          4,
+        ),
+        child: Column(children: [
+          Align(
+            // align the child within the container
+              alignment:
+              widget.isCurrentUser ? Alignment.centerRight : Alignment.centerLeft,
+              child: Column(children: [
+
+                DecoratedBox(
+                  // chat bubble decoration
+                    decoration: BoxDecoration(
+
+                      color: widget.isCurrentUser ? Colors.blue : Colors.grey[300],
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: (message.imageUrl != null &&
+                              message.imageUrl!.length > 0)
+                              ? Image.network(message.imageUrl.toString())
+                              : Text(
+                            message.text.toString(),
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyText1!
+                                .copyWith(
+                                color: widget.isCurrentUser
+                                    ? Colors.white
+                                    : Colors.black87),
+                          ),
+                        ),
+                      ],
+                    )),
+              ],)
+
+          ),
+          Visibility(
+            visible: widget.isLastSendMessage,
+            child: Container(
+              alignment: Alignment.bottomRight,
+              margin: EdgeInsets.fromLTRB(0, 5, 0, 0),
+              child: Text(widget.hasSeen ? "Seen" : widget.hasReceived? "Received" : "Unseen"),
+            ),
+          )
+        ]),
+      ),
     );
   }
 }
@@ -500,7 +842,7 @@ sendMessage(
 
   List<String> receivedBy = <String>[];
   receivedBy.add(currentUser.id.toString());
-
+  List<React> reacts = <React>[];
   Message message = Message(
       id: "",
       from: currentUser,
@@ -509,11 +851,11 @@ sendMessage(
       seenBy: seenBy,
       receivedBy: receivedBy,
       imageUrl: imageUrl,
+    reacts: reacts
   );
 
   convsController.sendMessage(
       convsController.conversations[convsIndex].id!, convsController.conversations[convsIndex].type!, message, convsIndex);
-
 
 }
 
@@ -546,7 +888,7 @@ class _ChatMessageTypingFieldState extends State<ChatMessageTypingField> {
           Container(
             margin: EdgeInsets.all(15.0),
             height: 61,
-            child: Row( 
+            child: Row(
               children: [
                 Expanded(
                   child: Container(
@@ -683,7 +1025,6 @@ class _ChatMessageTypingFieldState extends State<ChatMessageTypingField> {
                             "convsType": widget.convsController.conversations[widget.convsIndex].type,
                             "typingUsersId": widget.typingUsersId};
 
-
                           widget.socket.emit(typingEvent, json);
 
                         }
@@ -754,7 +1095,7 @@ class _ChatMessageTypingFieldState extends State<ChatMessageTypingField> {
     );
 
   }
- 
+
 
   var file;
   void _openGalleryAndUploadImage(
@@ -791,7 +1132,6 @@ class _ChatMessageTypingFieldState extends State<ChatMessageTypingField> {
 abstract class OnMessageSend{
   void onMessageSend();
 }
-
 
 
 

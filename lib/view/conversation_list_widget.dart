@@ -313,6 +313,11 @@ class _ConversationListWidgetState extends State<ConversationListWidget> {
           widget.currentUser, widget.socket, 0,widget.userController) //Fake Data
           .onMessageSend();
     });
+
+    String notifyNewReactAddedEvent = "notifyNewReactAdded?convsType=Single";
+    widget.socket.on(notifyNewReactAddedEvent, (data) {
+      widget.convsController.onNewReactAdded(widget.socket, data);
+    });
 }
 
   void setUpGroupMessagingRealTimeListeners() {
@@ -734,6 +739,7 @@ class _ConversationItemWidgetState extends State<ConversationItemWidget> {
                         seenBy.add(currentUser.id.toString());
                         List<String> receivedBy = <String>[];
                         receivedBy.add(currentUser.id.toString());
+                        List<React> reacts = <React>[];
 
                         messages.add(Message(
                             id: "Initial",
@@ -743,7 +749,8 @@ class _ConversationItemWidgetState extends State<ConversationItemWidget> {
                             seenBy: seenBy,
                             receivedBy: receivedBy,
                             imageUrl:
-                            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTKTSNwcT2YrRQJKGVQHClGtQgp1_x8kLd0Ig&usqp=CAU"));
+                            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTKTSNwcT2YrRQJKGVQHClGtQgp1_x8kLd0Ig&usqp=CAU",
+                        reacts: reacts));
 
                         selectedUsers.add(currentUser);
                         createGroupConversation(

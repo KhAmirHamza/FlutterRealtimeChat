@@ -46,6 +46,16 @@ final dio = Dio();
      socket!.emit('notifyMessageSeen', json);
   }
 
+   notifyNewReactAdded(String convsId, String messageId, String convsType, String reactTitle, String currentUserId) {
+     //Notify Sender, Receiver has seen the Message... Step: 5 //Receiver Page
+     var json = {"convsId": convsId, "messageId": messageId, "convsType": convsType,"reactTitle": reactTitle,  "newUserId": currentUserId};
+     print("notify other client that NewReactAdded called: json: "+json.toString());
+
+
+
+     socket!.emit('notifyNewReactAdded', json);
+   }
+
   }
 
 
@@ -55,6 +65,8 @@ abstract class SocketListeners{
   void onMessageReceived(IO.Socket socket, dynamic data, ); //Receiver has received the Message...  Step:4 //Sender Page
 
   void onMessageSeen(IO.Socket socket, dynamic data); //Receiver has seen the Message...  Step:6 //Sender Page
+
+  void onNewReactAdded(IO.Socket socket, dynamic data); //A User has reacted into the Message...  Step:6 //A User Page
 
 }
 
@@ -96,6 +108,7 @@ sendMessage(String convsId, String convsType,  Message message, int conversation
       'seenBy': message.seenBy,
       'receivedBy': message.receivedBy,
       'imageUrl': message.imageUrl,
+      'reacts': message.reacts,
     }),
     options: Options(headers: header),
   );
@@ -113,6 +126,7 @@ sendMessage(String convsId, String convsType,  Message message, int conversation
       "seenBy": messageData.seenBy,
       "receivedBy": messageData.receivedBy,
       'imageUrl': messageData.imageUrl,
+      'reacts': messageData.reacts,
       'createdAt': messageData.createdAt,
       'updatedAt': messageData.updatedAt,
     };

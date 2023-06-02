@@ -348,7 +348,7 @@ sendMessage(
 
   List<String> seenBy = <String>[];
   seenBy.add(currentUser.id.toString());
-
+  List<React> reacts = <React>[];
   Message message = Message(
     id: "",
     from: currentUser,
@@ -356,6 +356,7 @@ sendMessage(
     text: messageText,
     seenBy: seenBy,
     imageUrl: imageUrl,
+    reacts: reacts
   );
 
   convsController.sendMessage(

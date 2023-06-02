@@ -44,6 +44,9 @@ dependencies:
   flutter_speed_dial: ^3.0.5
   flutter_emoji: ">= 2.0.0"
   emoji_picker_flutter: ^1.5.4
+  flutter_smart_dialog: ^4.9.0+6
+  lottie: ^2.3.2
+  flutter_gif: ^0.0.4
 
 
 
@@ -76,6 +79,11 @@ flutter:
   assets:
     - assets/conversation.png
     - assets/selected.png
+    - assets/chat_box_left.png
+    - assets/chat_box_right.png
+    - assets/heart.gif
+    - assets/ok.gif
+    - assets/trust.gif
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware
