@@ -133,7 +133,6 @@ class ConversationController extends GetxController implements SocketListeners{
       'Content-type': 'application/json; charset=utf-8',
       'Accept': 'application/json'
     };
-
       var response = await dio.post(
         "https://nodejsrealtimechat.onrender.com/conversation/reactMessage?convsId=" + convsId,
         data: jsonEncode(<String, dynamic>{
@@ -323,24 +322,18 @@ class ConversationController extends GetxController implements SocketListeners{
           imageUrl: jsonMap['imageUrl'],
           reacts: reacts,
           createdAt: jsonMap['createdAt'],
-          updatedAt: jsonMap['updatedAt']);
+          updatedAt: jsonMap['updatedAt']
+      );
 
       if (!(message.receivedBy!.contains(currentUser.id!))) {
         message.receivedBy!.add(currentUser.id!);
         conversations[ convsIndex].messages!.add( message );
-        //
-        // seenMessage(
-        //     jsonMap['convsId'], jsonMap['convsType'], jsonMap['id'],
-        //     socket,currentUser.id!);
         receivedMessage(
             jsonMap['convsId'], jsonMap['convsType'], jsonMap['id'],
             socket,currentUser.id!);
-
         conversations.refresh();
       }
-
     }
-
   }
 
   @override

@@ -31,11 +31,9 @@ import 'package:http/http.dart' as http;
 import '../model/Conversation.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 
-
 bool isChatting = true;
 
-
-class pToP_ChatPage extends StatefulWidget  implements OnMessageSend{
+class pToP_ChatPage extends StatefulWidget implements OnMessageSend {
   // Completely Done for now
   ConversationController convsController;
   User currentUser, selectedUser;
@@ -44,11 +42,9 @@ class pToP_ChatPage extends StatefulWidget  implements OnMessageSend{
   IO.Socket socket;
   UserController userController;
 
-
-  pToP_ChatPage(
-      this.convsController, this.currentUser, this.selectedUser, this.socket, this.convsIndex, this.userController,
+  pToP_ChatPage(this.convsController, this.currentUser, this.selectedUser,
+      this.socket, this.convsIndex, this.userController,
       {super.key});
-
 
   @override
   State<pToP_ChatPage> createState() => _pToP_ChatPageState();
@@ -60,31 +56,27 @@ class pToP_ChatPage extends StatefulWidget  implements OnMessageSend{
 
     String notifyMessageSendEvent = "notifyMessageSend?convsType=Single";
     socket.on(notifyMessageSendEvent, (data) {
-      Message message = convsController
-          .conversations[convsIndex]
-          .messages![convsController.conversations[convsIndex]
-          .messages!.length -
-          1];
+      Message message = convsController.conversations[convsIndex].messages![
+          convsController.conversations[convsIndex].messages!.length - 1];
 
       //if (!(message.seenBy!.contains(currentUser.id!))) {
-        // message.receivedBy!.add(widget.currentUser.id!)
-        //  conversations[ convsIndex].messages!.add( message );
+      // message.receivedBy!.add(widget.currentUser.id!)
+      //  conversations[ convsIndex].messages!.add( message );
 
-        Conversation conversation = convsController.conversations[convsIndex];
+      Conversation conversation = convsController.conversations[convsIndex];
 
-        if(isChatting){
-          convsController.seenMessage(conversation.id!,conversation.type!,
-              message.id!, socket, currentUser.id!);
+      if (isChatting) {
+        convsController.seenMessage(conversation.id!, conversation.type!,
+            message.id!, socket, currentUser.id!);
 
-          convsController.conversations.refresh();
-        }
-    //  }
+        convsController.conversations.refresh();
+      }
+      //  }
     });
   }
 }
 
-class _pToP_ChatPageState extends State<pToP_ChatPage>{
-
+class _pToP_ChatPageState extends State<pToP_ChatPage> {
   List<String> typingUsersId = <String>[];
 
   @override
@@ -100,12 +92,14 @@ class _pToP_ChatPageState extends State<pToP_ChatPage>{
     super.dispose();
     String typingEvent = "typing"; //sending event name...
 
-    if(typingUsersId.contains(widget.currentUser.id)){
+    if (typingUsersId.contains(widget.currentUser.id)) {
       typingUsersId.remove(widget.currentUser.id);
       var json = {
         "convsId": widget.convsController.conversations[widget.convsIndex].id,
-        "convsType": widget.convsController.conversations[widget.convsIndex].type,
-        "typingUsersId": typingUsersId};
+        "convsType":
+            widget.convsController.conversations[widget.convsIndex].type,
+        "typingUsersId": typingUsersId
+      };
 
       widget.socket.emit(typingEvent, json);
     }
@@ -113,56 +107,44 @@ class _pToP_ChatPageState extends State<pToP_ChatPage>{
     isChatting = false;
   }
 
-
-
   @override
   Widget build(BuildContext context) {
-
-
-
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
-
       Message message = widget
-          .convsController
-          .conversations[widget.convsIndex]
-          .messages![widget.convsController.conversations[widget.convsIndex]
-          .messages!.length -
+          .convsController.conversations[widget.convsIndex].messages![widget
+              .convsController
+              .conversations[widget.convsIndex]
+              .messages!
+              .length -
           1];
 
-
-
       if (!message.receivedBy!.contains(widget.currentUser.id)) {
-
         widget
             .convsController
             .conversations[widget.convsIndex]
             .messages![widget.convsController.conversations[widget.convsIndex]
-            .messages!.length -
-            1]
+                    .messages!.length -
+                1]
             .receivedBy!
             .add(widget.currentUser.id!);
-
 
         widget.convsController.receivedMessage(
             widget.convsController.conversations[widget.convsIndex].id!,
             widget.convsController.conversations[widget.convsIndex].type!,
             message.id!,
             widget.socket,
-            widget.currentUser.id! );
-
+            widget.currentUser.id!);
 
         //widget.convsController.conversations.refresh();
       }
 
       if (!message.seenBy!.contains(widget.currentUser.id)) {
-
-
         widget
             .convsController
             .conversations[widget.convsIndex]
             .messages![widget.convsController.conversations[widget.convsIndex]
-            .messages!.length -
-            1]
+                    .messages!.length -
+                1]
             .seenBy!
             .add(widget.currentUser.id!);
 
@@ -173,57 +155,49 @@ class _pToP_ChatPageState extends State<pToP_ChatPage>{
             widget.socket,
             widget.currentUser.id!);
 
-
         widget.convsController.conversations.refresh();
-
       }
 
+      String typingEvent =
+          "typing?convsId=${widget.convsController.conversations[widget.convsIndex].id}"; //typing event name...
+      widget.socket.on(typingEvent, (data) {
+        var jsonMap = data as Map<String, dynamic>;
+        var result = jsonMap['typingUsersId'].toList();
 
+        List<String> ids = <String>[];
+        for (int i = 0; i < result.length; i++) {
+          ids.add(result[i]);
+        }
 
+        //typingUsersId.clear();
 
-      String typingEvent = "typing?convsId=${widget.convsController.conversations[widget.convsIndex].id}"; //typing event name...
-      widget.socket.on(typingEvent, (data){
-
-          var jsonMap = data as Map<String, dynamic>;
-          var result = jsonMap['typingUsersId'].toList();
-
-          List<String> ids = <String>[];
-          for(int i=0; i<result.length; i++){ ids.add(result[i]);}
-
-          //typingUsersId.clear();
-
-         // if(ids.isNotEmpty && ids[ids.length-1]!=widget.currentUser.id){
-          typingUsersId = ids;
-            setState(() {
-
-            //  print("Typing: users: "+result.length.toString());
-            });
+        // if(ids.isNotEmpty && ids[ids.length-1]!=widget.currentUser.id){
+        typingUsersId = ids;
+        setState(() {
+          //  print("Typing: users: "+result.length.toString());
+        });
         //  }
       });
 
-
-      String notifyMessageReceivedEvent ="notifyMessageReceived?convsType=Single";
-      widget.socket.on(notifyMessageReceivedEvent, (data){
+      String notifyMessageReceivedEvent =
+          "notifyMessageReceived?convsType=Single";
+      widget.socket.on(notifyMessageReceivedEvent, (data) {
         widget.convsController.onMessageReceived(widget.socket, data);
       });
 
-
-
-      String notifyMessageSeenEvent ="notifyMessageSeen?convsType=Single";
-      widget.socket.on(notifyMessageSeenEvent, (data){
+      String notifyMessageSeenEvent = "notifyMessageSeen?convsType=Single";
+      widget.socket.on(notifyMessageSeenEvent, (data) {
         //
         // var jsonMap = data as Map<String, dynamic>;
         // String newUserId = jsonMap['newUserId'];
 
-        print("isChatting: "+isChatting.toString());
-        if(isChatting){
+        print("isChatting: " + isChatting.toString());
+        if (isChatting) {
           widget.convsController.onMessageSeen(widget.socket, data);
-
-        }else {};
+        } else {}
+        ;
       });
-
     });
-
 
     return WillPopScope(
       onWillPop: () async {
@@ -232,57 +206,75 @@ class _pToP_ChatPageState extends State<pToP_ChatPage>{
         Navigator.push(
             context,
             MaterialPageRoute(
-                builder: (context) =>
-                    ConversationListWidget(widget.userController, widget.currentUser, widget.socket, widget.convsController)
-            ));
+                builder: (context) => ConversationListWidget(
+                    widget.userController,
+                    widget.currentUser,
+                    widget.socket,
+                    widget.convsController)));
 
-      return false;
+        return false;
       },
       child: Scaffold(
         appBar: AppBar(
-              shadowColor: Colors.white,
-              elevation: 1,
-              leading: BackButton(
-                color: Colors.black,
-              onPressed: ()=> Navigator.of(context, rootNavigator: true).pop(),
-            ),
-
-              backgroundColor:Colors.white,
-
-              title: Align( alignment: Alignment.center,
-              child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: <Widget>[
-                Text(widget.selectedUser.name.toString(), style: TextStyle(fontSize: 16, color: Colors.black),),
-                Container(margin: EdgeInsets.only(top: 3) ,child: Text("Neways Internationl (S&IT)", style: TextStyle(fontSize: 10, color: Colors.grey),)),
-              ]),
-            ),
-              actions: <Widget>[
-                IconButton(
-                  icon: const Icon(Icons.call_outlined, color: Colors.black,),
-                  tooltip: 'Call Now',
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('This feature is coming soon!')));
-                  },
-                ),
-                IconButton(
-                  icon: const Icon(Icons.more_horiz, color: Colors.black,),
-                  tooltip: 'More',
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('This feature is coming soon!'))
-                    );
-                  },
-                ),
-
-              ],),
-            body: MessageListWidget(widget.convsController, widget.currentUser,
-                widget.selectedUser, widget.socket, widget.convsIndex, typingUsersId),
+          shadowColor: Colors.white,
+          elevation: 1,
+          leading: BackButton(
+            color: Colors.black,
+            onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
           ),
+          backgroundColor: Colors.white,
+          title: Align(
+            alignment: Alignment.center,
+            child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: <Widget>[
+                  Text(
+                    widget.selectedUser.name.toString(),
+                    style: TextStyle(fontSize: 16, color: Colors.black),
+                  ),
+                  Container(
+                      margin: EdgeInsets.only(top: 3),
+                      child: Text(
+                        "Neways Internationl (S&IT)",
+                        style: TextStyle(fontSize: 10, color: Colors.grey),
+                      )),
+                ]),
+          ),
+          actions: <Widget>[
+            IconButton(
+              icon: const Icon(
+                Icons.call_outlined,
+                color: Colors.black,
+              ),
+              tooltip: 'Call Now',
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text('This feature is coming soon!')));
+              },
+            ),
+            IconButton(
+              icon: const Icon(
+                Icons.more_horiz,
+                color: Colors.black,
+              ),
+              tooltip: 'More',
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text('This feature is coming soon!')));
+              },
+            ),
+          ],
+        ),
+        body: MessageListWidget(
+            widget.convsController,
+            widget.currentUser,
+            widget.selectedUser,
+            widget.socket,
+            widget.convsIndex,
+            typingUsersId),
+      ),
     );
   }
-
 }
 
 class MessageListWidget extends StatefulWidget {
@@ -295,8 +287,8 @@ class MessageListWidget extends StatefulWidget {
 
   final dio = Dio();
 
-  MessageListWidget(
-      this.convsController, this.currentUser, this.selectedUser, this.socket, this.convsIndex, this.typingUsersId,
+  MessageListWidget(this.convsController, this.currentUser, this.selectedUser,
+      this.socket, this.convsIndex, this.typingUsersId,
       {super.key});
 
   @override
@@ -304,23 +296,16 @@ class MessageListWidget extends StatefulWidget {
 }
 
 class _MessageListWidgetState extends State<MessageListWidget> {
-
-
-
-
   @override
   Widget build(BuildContext context) {
+    List<String> ids = widget.typingUsersId;
 
-    List<String>  ids = widget.typingUsersId;
-
-    if(ids.contains(widget.currentUser.id)) ids.remove(widget.currentUser.id);
-
+    if (ids.contains(widget.currentUser.id)) ids.remove(widget.currentUser.id);
 
     return Column(
       children: <Widget>[
         Expanded(child: GetX<ConversationController>(
           builder: (controller) {
-
             var items = widget
                 .convsController.conversations[widget.convsIndex].messages;
 
@@ -343,47 +328,69 @@ class _MessageListWidgetState extends State<MessageListWidget> {
                 print("SeenByNow1: ${item.seenBy}");
 
                 int position =
-                getLastSendMessageIndex(widget.currentUser.id!, items);
+                    getLastSendMessageIndex(widget.currentUser.id!, items);
 
                 bool isLastSendMessage = reversedIndex == position;
 
-               String createdAtDate =  item.createdAt!.toString().substring(0, 10);
+                String createdAtDate =
+                    item.createdAt!.toString().substring(0, 10);
 
                 bool hasMessagesAtSameDay = false;
-                 if(reversedIndex>0){
-                  String createdAtPreviousDate =  items[reversedIndex-1].createdAt!.substring(0, 10);
-                  if(createdAtPreviousDate==createdAtDate) hasMessagesAtSameDay = true;
+                if (reversedIndex > 0) {
+                  String createdAtPreviousDate =
+                      items[reversedIndex - 1].createdAt!.substring(0, 10);
+                  if (createdAtPreviousDate == createdAtDate)
+                    hasMessagesAtSameDay = true;
                 }
-                return Column(children: [
-                  Visibility( child: Container( margin: EdgeInsets.fromLTRB(0, 50, 0, 10),
-                    child: DecoratedBox(decoration: BoxDecoration(color: Colors.blueGrey[400], borderRadius: BorderRadius.circular(15)),
-                      child: Padding(
-                        padding: EdgeInsets.fromLTRB(10, 3, 10, 3),
-                        child: Text( item.createdAt.toString(), style: TextStyle(color: Colors.white),),
+                return Column(
+                  children: [
+                    Visibility(
+                      child: Container(
+                        margin: EdgeInsets.fromLTRB(0, 50, 0, 10),
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                              color: Colors.blueGrey[400],
+                              borderRadius: BorderRadius.circular(15)),
+                          child: Padding(
+                            padding: EdgeInsets.fromLTRB(10, 3, 10, 3),
+                            child: Text(
+                              item.createdAt.toString(),
+                              style: TextStyle(color: Colors.white),
+                            ),
+                          ),
+                        ),
                       ),
+                      visible: !hasMessagesAtSameDay,
                     ),
-                  ), visible: !hasMessagesAtSameDay,),
-
-
-                  ChatBubble(
-                      messageIndex: reversedIndex,
-                      convsIndex: widget.convsIndex,
-                      isCurrentUser: item.from!.id == widget.currentUser.id,
-                      hasSeen: hasSeen,
-                      hasReceived: hasReceived,
-                      isLastSendMessage: isLastSendMessage,
-                      convsController: widget.convsController,
-                      socket: widget.socket,
-                      currentUser: widget.currentUser)
-                ],);
+                    ChatBubble(
+                        messageIndex: reversedIndex,
+                        convsIndex: widget.convsIndex,
+                        isCurrentUser: item.from!.id == widget.currentUser.id,
+                        hasSeen: hasSeen,
+                        hasReceived: hasReceived,
+                        isLastSendMessage: isLastSendMessage,
+                        convsController: widget.convsController,
+                        socket: widget.socket,
+                        currentUser: widget.currentUser),
+                  ],
+                );
               },
             );
           },
         )),
-
-        TypingIndicator(showIndicator: ids.isNotEmpty, bubbleColor: Colors.black12,flashingCircleBrightColor: Colors.white, flashingCircleDarkColor: Colors.blueAccent,),
-        ChatMessageTypingField(widget.convsController, widget.currentUser, widget.selectedUser, widget.socket, widget.convsIndex, widget.typingUsersId),
-
+        TypingIndicator(
+          showIndicator: ids.isNotEmpty,
+          bubbleColor: Colors.black12,
+          flashingCircleBrightColor: Colors.white,
+          flashingCircleDarkColor: Colors.blueAccent,
+        ),
+        ChatMessageTypingField(
+            widget.convsController,
+            widget.currentUser,
+            widget.selectedUser,
+            widget.socket,
+            widget.convsIndex,
+            widget.typingUsersId),
       ],
     );
   }
@@ -428,11 +435,9 @@ class ChatBubble extends StatefulWidget {
 }
 
 class _ChatBubbleState extends State<ChatBubble> {
-
   Offset _tapPosition = Offset.zero;
 
   void _getTapPosition(TapDownDetails tapPosition) {
-
     final RenderBox referenceBox = context.findRenderObject() as RenderBox;
 
     setState(() {
@@ -472,15 +477,10 @@ class _ChatBubbleState extends State<ChatBubble> {
   //   }
   // }
 
-
-
   @override
   Widget build(BuildContext context) {
-
-
-
-
-    Message message = widget.convsController.conversations[widget.convsIndex].messages![widget.messageIndex];
+    Message message = widget.convsController.conversations[widget.convsIndex]
+        .messages![widget.messageIndex];
     var x, y;
 
     _onTapDown(TapDownDetails details) {
@@ -501,161 +501,158 @@ class _ChatBubbleState extends State<ChatBubble> {
 
     void _showPopUpMenuAtPosition(var x, var y, bool isCurrentUser) async {
       final RenderObject? overlay =
-      Overlay.of(context).context.findRenderObject();
-
-
+          Overlay.of(context).context.findRenderObject();
 
       final result = await showMenu(
           context: context,
           clipBehavior: Clip.hardEdge,
-
           shadowColor: Colors.transparent,
-
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(25.0)
-            ,
+            borderRadius: BorderRadius.circular(25.0),
           ),
           color: Colors.transparent,
           position: RelativeRect.fromRect(
               Rect.fromLTWH(x, y, 100, 100),
               Rect.fromLTWH(0, 0, overlay!.paintBounds.size.width,
                   overlay.paintBounds.size.height)),
-
           items: [
             PopupMenuItem(
               padding: EdgeInsets.symmetric(vertical: 7),
               value: "fav",
-
               child: AnimatedContainer(
                 width: 250,
                 padding: EdgeInsets.all(5),
                 duration: const Duration(milliseconds: 1000),
                 // Provide an optional curve to make the animation feel smoother.
                 decoration: BoxDecoration(
-
-                 // boxShadow: [BoxShadow(color: Colors.grey)],
+                  // boxShadow: [BoxShadow(color: Colors.grey)],
                   image: DecorationImage(
-                    image: isCurrentUser? AssetImage('assets/chat_box_right.png') : AssetImage('assets/chat_box_left.png'),
+                    image: isCurrentUser
+                        ? AssetImage('assets/chat_box_right.png')
+                        : AssetImage('assets/chat_box_left.png'),
                     fit: BoxFit.fill,
                   ),
                   borderRadius: BorderRadius.circular(15),
                 ),
                 curve: Curves.fastOutSlowIn,
 
-                child: Row( children: [
-                  Container(
-                    margin: const EdgeInsets.fromLTRB(5,10,0,0),
-                  //  padding: EdgeInsets.all(2),
-                    height: 40,
-                    width: 40,
-                    child: FloatingActionButton(
-                        heroTag: 'btn1',
-                        tooltip:
-                        'Secret Chat',
-                        backgroundColor: Colors.transparent,
-                        foregroundColor: Colors.white ,
-                        splashColor: Colors.blue,
-                        elevation: 0,
-
-                        child:  Container(
-                          decoration: BoxDecoration(
-                              color: Colors.blue,
-                              borderRadius: BorderRadius.circular(25)
-                          ),
-                         // padding: EdgeInsets.all(2.5),
-                          child: ClipOval(
-                            child: Image.network(
-                              'https://www.gifcen.com/wp-content/uploads/2022/05/thumbs-up-gif-7.gif',
-                              width: 30,
-                              height: 30,
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-                        ),
-                        onPressed: (){
-
-      //React react = React(title: "like", userId: widget.currentUser.id);
-     // if(!widget.convsController.conversations[widget.convsIndex].messages![widget.messageIndex].reacts!.contains(react)) {
-
-        List<React> reacts = widget.convsController.conversations[widget.convsIndex].messages![widget.messageIndex].reacts!;
-
-       // React r = reacts.firstWhere((it) => it.userId == widget.currentUser.id);
-
-
-      if (!reacts.any((item) => item.userId == widget.currentUser.id)) {
-
-        widget.convsController.addReactUpdateConvs(
-            widget.convsIndex,
-            widget.messageIndex,
-            widget.convsController.conversations[widget.convsIndex].id!,
-            widget.convsController.conversations[widget.convsIndex].type!,
-            message.id!,
-            "like",
-            widget.socket,
-            widget.currentUser.id!);
-
-
-
-
-                   //     }
-      }
-        Navigator.pop(context);
-                        }
-                    ),
-
-                  ),
-                  Container(
-                    margin: const EdgeInsets.fromLTRB(5,10,0,0),
-                 //   padding: EdgeInsets.all(2),
-                    height: 40,
-                    width: 40,
-                    child: FloatingActionButton(
-                        heroTag: 'btn1',
-                        tooltip:
-                        'Secret Chat',
-                        backgroundColor: Colors.transparent,
-                        foregroundColor: Colors.white ,
-                        splashColor: Colors.blueAccent,
-                        elevation: 0,
-
-                        child:  Container(
-                          decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(25)
-                          ),
-                          child: ClipOval(
-                            child: Image.network(
-                              'https://cdn.pixabay.com/animation/2022/10/28/19/23/19-23-08-315_512.gif',
-                              fit: BoxFit.fitHeight,
-                              width: 30,
-                              height: 30,
-                            ),
-                          ),
-                        ),
-
-                        onPressed: (){
-                          Navigator.pop(context);
-                        }),
-                  ),
-                  Container(
-                    margin: const EdgeInsets.fromLTRB(5,10,0,0),
-                    height: 40,
-                    width: 40,
-                    child: FloatingActionButton(
-                        heroTag: 'btn1',
-                        tooltip:
-                        'Secret Chat',
-                        backgroundColor: Colors.transparent,
-                        foregroundColor: Colors.white ,
-                        splashColor: Colors.blueAccent,
-                        elevation: 0,
-
-                        child:  Container(
+                child: Row(
+                  children: [
+                    Container(
+                      margin: const EdgeInsets.fromLTRB(5, 10, 0, 0),
+                      //  padding: EdgeInsets.all(2),
+                      height: 40,
+                      width: 40,
+                      child: FloatingActionButton(
+                          heroTag: 'btn1',
+                          tooltip: 'Secret Chat',
+                          backgroundColor: Colors.transparent,
+                          foregroundColor: Colors.white,
+                          splashColor: Colors.blue,
+                          elevation: 0,
+                          child: Container(
                             decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(25)
+                                color: Colors.blue,
+                                borderRadius: BorderRadius.circular(25)),
+                            // padding: EdgeInsets.all(2.5),
+                            child: ClipOval(
+                              child: Image.network(
+                                'https://www.gifcen.com/wp-content/uploads/2022/05/thumbs-up-gif-7.gif',
+                                width: 30,
+                                height: 30,
+                                fit: BoxFit.cover,
+                              ),
                             ),
-                           // padding: EdgeInsets.all(2.5),
+                          ),
+                          onPressed: () {
+                            List<React> reacts = widget
+                                .convsController
+                                .conversations[widget.convsIndex]
+                                .messages![widget.messageIndex]
+                                .reacts!;
+                            // React r = reacts.firstWhere((it) => it.userId == widget.currentUser.id);
+                            if (!reacts.any((item) =>
+                                item.userId == widget.currentUser.id)) {
+                              widget.convsController.addReactUpdateConvs(
+                                  widget.convsIndex,
+                                  widget.messageIndex,
+                                  widget.convsController
+                                      .conversations[widget.convsIndex].id!,
+                                  widget.convsController
+                                      .conversations[widget.convsIndex].type!,
+                                  message.id!,
+                                  "like",
+                                  widget.socket,
+                                  widget.currentUser.id!);
+                            }
+                            Navigator.pop(context);
+                          }),
+                    ),
+                    Container(
+                      margin: const EdgeInsets.fromLTRB(5, 10, 0, 0),
+                      //   padding: EdgeInsets.all(2),
+                      height: 40,
+                      width: 40,
+                      child: FloatingActionButton(
+                          heroTag: 'btn1',
+                          tooltip: 'Secret Chat',
+                          backgroundColor: Colors.transparent,
+                          foregroundColor: Colors.white,
+                          splashColor: Colors.blueAccent,
+                          elevation: 0,
+                          child: Container(
+                            decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(25)),
+                            child: ClipOval(
+                              child: Image.network(
+                                'https://cdn.pixabay.com/animation/2022/10/28/19/23/19-23-08-315_512.gif',
+                                fit: BoxFit.fitHeight,
+                                width: 30,
+                                height: 30,
+                              ),
+                            ),
+                          ),
+                          onPressed: () {
+                            List<React> reacts = widget
+                                .convsController
+                                .conversations[widget.convsIndex]
+                                .messages![widget.messageIndex]
+                                .reacts!;
+                            // React r = reacts.firstWhere((it) => it.userId == widget.currentUser.id);
+                            if (!reacts.any((item) =>
+                                item.userId == widget.currentUser.id)) {
+                              widget.convsController.addReactUpdateConvs(
+                                  widget.convsIndex,
+                                  widget.messageIndex,
+                                  widget.convsController
+                                      .conversations[widget.convsIndex].id!,
+                                  widget.convsController
+                                      .conversations[widget.convsIndex].type!,
+                                  message.id!,
+                                  "Love",
+                                  widget.socket,
+                                  widget.currentUser.id!);
+                            }
+                            Navigator.pop(context);
+                          }),
+                    ),
+                    Container(
+                      margin: const EdgeInsets.fromLTRB(5, 10, 0, 0),
+                      height: 40,
+                      width: 40,
+                      child: FloatingActionButton(
+                          heroTag: 'btn1',
+                          tooltip: 'Secret Chat',
+                          backgroundColor: Colors.transparent,
+                          foregroundColor: Colors.white,
+                          splashColor: Colors.blueAccent,
+                          elevation: 0,
+                          child: Container(
+                            decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(25)),
+                            // padding: EdgeInsets.all(2.5),
                             child: ClipOval(
                               child: Image.network(
                                 'https://gifdb.com/images/high/cute-finger-heart-hop7csjnvi37i29e.gif',
@@ -664,31 +661,46 @@ class _ChatBubbleState extends State<ChatBubble> {
                                 fit: BoxFit.fitHeight,
                               ),
                             ),
-                        ),
-
-                        onPressed: (){
-                          Navigator.pop(context);
-                        }),
-                  ),
-                  Container(
-                    margin: const EdgeInsets.fromLTRB(5,10,0,0),
-                    height: 40,
-                    width: 40,
-                    child: FloatingActionButton(
-                        heroTag: 'btn1',
-                        tooltip:
-                        'Secret Chat',
-                        backgroundColor: Colors.transparent,
-                        foregroundColor: Colors.white ,
-                        splashColor: Colors.blueAccent,
-                        elevation: 0,
-
-                        child:  Container(
+                          ),
+                          onPressed: () {
+                            List<React> reacts = widget
+                                .convsController
+                                .conversations[widget.convsIndex]
+                                .messages![widget.messageIndex]
+                                .reacts!;
+                            // React r = reacts.firstWhere((it) => it.userId == widget.currentUser.id);
+                            if (!reacts.any((item) =>
+                                item.userId == widget.currentUser.id)) {
+                              widget.convsController.addReactUpdateConvs(
+                                  widget.convsIndex,
+                                  widget.messageIndex,
+                                  widget.convsController
+                                      .conversations[widget.convsIndex].id!,
+                                  widget.convsController
+                                      .conversations[widget.convsIndex].type!,
+                                  message.id!,
+                                  "Support",
+                                  widget.socket,
+                                  widget.currentUser.id!);
+                            }
+                            Navigator.pop(context);
+                          }),
+                    ),
+                    Container(
+                      margin: const EdgeInsets.fromLTRB(5, 10, 0, 0),
+                      height: 40,
+                      width: 40,
+                      child: FloatingActionButton(
+                          heroTag: 'btn1',
+                          backgroundColor: Colors.transparent,
+                          foregroundColor: Colors.white,
+                          splashColor: Colors.blueAccent,
+                          elevation: 0,
+                          child: Container(
                             decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(25)
-                            ),
-                           // padding: EdgeInsets.all(2.5),
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(25)),
+                            // padding: EdgeInsets.all(2.5),
                             child: ClipOval(
                               child: Image.network(
                                 'https://i.pinimg.com/originals/b8/fe/79/b8fe7956472296b40f3ce7a7e7d68108.gif',
@@ -697,31 +709,47 @@ class _ChatBubbleState extends State<ChatBubble> {
                                 fit: BoxFit.fitHeight,
                               ),
                             ),
-                        ),
-
-                        onPressed: (){
-                          Navigator.pop(context);
-                        }),
-                  ),
-                  Container(
-                    margin: const EdgeInsets.fromLTRB(0,10,5,0),
-                    height: 40,
-                    width: 40,
-                    child: FloatingActionButton(
-                        heroTag: 'btn1',
-                        tooltip:
-                        'Secret Chat',
-                        backgroundColor: Colors.transparent,
-                        foregroundColor: Colors.white ,
-                        splashColor: Colors.blueAccent,
-                        elevation: 0,
-
-                        child:  Container(
+                          ),
+                          onPressed: () {
+                            List<React> reacts = widget
+                                .convsController
+                                .conversations[widget.convsIndex]
+                                .messages![widget.messageIndex]
+                                .reacts!;
+                            // React r = reacts.firstWhere((it) => it.userId == widget.currentUser.id);
+                            if (!reacts.any((item) =>
+                                item.userId == widget.currentUser.id)) {
+                              widget.convsController.addReactUpdateConvs(
+                                  widget.convsIndex,
+                                  widget.messageIndex,
+                                  widget.convsController
+                                      .conversations[widget.convsIndex].id!,
+                                  widget.convsController
+                                      .conversations[widget.convsIndex].type!,
+                                  message.id!,
+                                  "Hate",
+                                  widget.socket,
+                                  widget.currentUser.id!);
+                            }
+                            Navigator.pop(context);
+                          }),
+                    ),
+                    Container(
+                      margin: const EdgeInsets.fromLTRB(0, 10, 5, 0),
+                      height: 40,
+                      width: 40,
+                      child: FloatingActionButton(
+                          heroTag: 'btn1',
+                          tooltip: 'Secret Chat',
+                          backgroundColor: Colors.transparent,
+                          foregroundColor: Colors.white,
+                          splashColor: Colors.blueAccent,
+                          elevation: 0,
+                          child: Container(
                             decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(25)
-                            ),
-                           // padding: EdgeInsets.all(2.5),
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(25)),
+                            // padding: EdgeInsets.all(2.5),
                             child: ClipOval(
                               child: Image.network(
                                 'https://media.tenor.com/l5_u4JytFLYAAAAC/wow-emoji.gif',
@@ -730,15 +758,33 @@ class _ChatBubbleState extends State<ChatBubble> {
                                 fit: BoxFit.fitHeight,
                               ),
                             ),
-                        ),
-
-                        onPressed: (){
-                          Navigator.pop(context);
-                        }),
-                  ),
-
-
-                ],),
+                          ),
+                          onPressed: () {
+                            List<React> reacts = widget
+                                .convsController
+                                .conversations[widget.convsIndex]
+                                .messages![widget.messageIndex]
+                                .reacts!;
+                            // React r = reacts.firstWhere((it) => it.userId == widget.currentUser.id);
+                            if (!reacts.any((item) =>
+                                item.userId == widget.currentUser.id)) {
+                              widget.convsController.addReactUpdateConvs(
+                                  widget.convsIndex,
+                                  widget.messageIndex,
+                                  widget.convsController
+                                      .conversations[widget.convsIndex].id!,
+                                  widget.convsController
+                                      .conversations[widget.convsIndex].type!,
+                                  message.id!,
+                                  "Surprised",
+                                  widget.socket,
+                                  widget.currentUser.id!);
+                            }
+                            Navigator.pop(context);
+                          }),
+                    ),
+                  ],
+                ),
               ),
             )
           ]);
@@ -753,79 +799,217 @@ class _ChatBubbleState extends State<ChatBubble> {
           break;
       }
     }
+    int like = 0, love = 0, support = 0, surprised = 0, hate = 0;
+    int reactCount = message.reacts!.length;
 
+    for(int i=0; i<reactCount; i++){
+      if(message.reacts![i].title!.toLowerCase()=='like'){
+        like++;
+      }else if(message.reacts![i].title!.toLowerCase()=='love'){
+        love++;
+      }else if(message.reacts![i].title!.toLowerCase()=='support'){
+        support++;
+      }else if(message.reacts![i].title!.toLowerCase()=='surprised'){
+        surprised++;
+      }else if(message.reacts![i].title!.toLowerCase()=='hate'){
+        hate++;
+      }
+    }
 
 
     return GestureDetector(
-     // onTapDown: (position) => {_getTapPosition(position)},
-      onTapDown: (TapDownDetails details) => _onTapDown(details),
-      onTapUp: (TapUpDetails details) => _onTapUp(details),
-      onLongPress: () => {
-        //_showContextMenu(context)
-        _showPopUpMenuAtPosition(x,y, widget.isCurrentUser)
-      },
-      onDoubleTap: () => {
-        //_showContextMenu(context)
-      _showPopUpMenuAtPosition(x,y, widget.isCurrentUser)
-      },
-
-
-      child: Padding(
-        // add some padding
-        padding: EdgeInsets.fromLTRB(
-          widget.isCurrentUser ? 64.0 : 16.0,
-          4,
-          widget.isCurrentUser ? 16.0 : 64.0,
-          4,
-        ),
-        child: Column(children: [
-          Align(
-            // align the child within the container
-              alignment:
-              widget.isCurrentUser ? Alignment.centerRight : Alignment.centerLeft,
-              child: Column(children: [
-
-                DecoratedBox(
-                  // chat bubble decoration
-                    decoration: BoxDecoration(
-
-                      color: widget.isCurrentUser ? Colors.blue : Colors.grey[300],
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Column(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: (message.imageUrl != null &&
-                              message.imageUrl!.length > 0)
-                              ? Image.network(message.imageUrl.toString())
-                              : Text(
-                            message.text.toString(),
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyText1!
-                                .copyWith(
+        //onTapDown: (position) => {_getTapPosition(position)},
+        onTapDown: (TapDownDetails details) => _onTapDown(details),
+        onTapUp: (TapUpDetails details) => _onTapUp(details),
+        onLongPress: () => {
+              //_showContextMenu(context)
+              _showPopUpMenuAtPosition(x, y, widget.isCurrentUser)
+            },
+        onDoubleTap: () => {
+              //_showContextMenu(context)
+              _showPopUpMenuAtPosition(x, y, widget.isCurrentUser)
+            },
+        child: Container(
+          alignment:  widget.isCurrentUser
+        ? Alignment.centerRight
+            : Alignment.centerLeft,
+          padding:  EdgeInsets.fromLTRB(
+              widget.isCurrentUser ? 64.0 : 16.0,
+              4,
+              widget.isCurrentUser ? 16.0 : 64.0,
+              4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              IntrinsicWidth(
+                stepWidth: 0,
+                child: Stack(
+                  alignment: Alignment.bottomRight,
+                 // crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(
+                          widget.isCurrentUser ? 5 : 10,
+                          0,
+                          0,
+                          15),
+                      child: Column(
+                        children: [
+                          DecoratedBox(
+                              // chat bubble decoration
+                              decoration: BoxDecoration(
                                 color: widget.isCurrentUser
-                                    ? Colors.white
-                                    : Colors.black87),
+                                    ? Colors.blue
+                                    : Colors.grey[300],
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Column(
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.all(12),
+                                    child: (message.imageUrl != null &&
+                                            message.imageUrl!.length > 0)
+                                        ? Image.network(
+                                            message.imageUrl.toString())
+                                        : Text(
+                                            message.text.toString(),
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodyText1!
+                                                .copyWith(
+                                                    color: widget.isCurrentUser
+                                                        ? Colors.white
+                                                        : Colors.black87
+                                            ,fontSize: 16,
+                                            fontWeight:FontWeight.w400),
+                                          ),
+                                  ),
+                                ],
+                              )),
+                        ],
+                      ),
+                    ),
+                    Positioned(
+                      bottom: 5,
+                      child: Row(children: [
+                        Visibility(
+                          visible: like>0,
+                          child: Container(
+                            margin: EdgeInsets.only(right: 1),
+                            decoration: BoxDecoration(
+                                shape: BoxShape.circle),
+                            // padding: EdgeInsets.all(2.5),
+                            child: ClipOval(
+                              child: Image.network(
+                                'https://www.gifcen.com/wp-content/uploads/2022/05/thumbs-up-gif-7.gif',
+                                width: 20,
+                                height: 20,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
                           ),
                         ),
-                      ],
-                    )),
-              ],)
+                        Visibility(
+                          visible: love>0,
+                          child: Container(
+                            margin: EdgeInsets.only(right: 1),
+                            decoration: BoxDecoration(
+                                shape: BoxShape.circle),
+                            // padding: EdgeInsets.all(2.5),
+                            child: ClipOval(
+                              child: Image.network(
+                                'https://cdn.pixabay.com/animation/2022/10/28/19/23/19-23-08-315_512.gif',
+                                width: 20,
+                                height: 20,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
+                        ),
+                        Visibility(
+                          visible: surprised>0,
+                          child: Container(
+                            margin: EdgeInsets.only(right: 1),
+                            decoration: BoxDecoration(
+                                shape: BoxShape.circle),
+                            // padding: EdgeInsets.all(2.5),
+                            child: ClipOval(
+                              child: Image.network(
+                                'https://media.tenor.com/l5_u4JytFLYAAAAC/wow-emoji.gif',
+                                width: 20,
+                                height: 20,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
+                        ),
+                        Visibility(
+                          visible: hate>0,
+                          child: Container(
+                            margin: EdgeInsets.only(right: 1),
+                            decoration: BoxDecoration(
+                                shape: BoxShape.circle),
+                            // padding: EdgeInsets.all(2.5),
+                            child: ClipOval(
+                              child: Image.network(
+                                'https://i.pinimg.com/originals/b8/fe/79/b8fe7956472296b40f3ce7a7e7d68108.gif',
+                                width: 20,
+                                height: 20,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
+                        ),
+                        Visibility(
+                          visible: support>0,
+                          child: Container(
+                            margin: EdgeInsets.only(right: 1),
+                            decoration: BoxDecoration(
+                                shape: BoxShape.circle),
+                            // padding: EdgeInsets.all(2.5),
+                            child: ClipOval(
+                              child: Image.network(
+                                'https://gifdb.com/images/high/cute-finger-heart-hop7csjnvi37i29e.gif',
+                                width: 20,
+                                height: 20,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
+                        ),
+                        Visibility(
+                          visible: reactCount>0,
+                          child: Container(
+                            margin: EdgeInsets.only(right: 1),
+                            decoration: BoxDecoration(
+                                shape: BoxShape.circle),
+                            // padding: EdgeInsets.all(2.5),
+                            child: ClipOval(
+                              child: Text(reactCount.toString()),
+                            ),
+                          ),
+                        ),
+                      ],)
+                    )
+                  ],
+                ),
+              ),
+              Visibility(
+                visible: widget.isLastSendMessage,
+                child: Container(
 
+                  alignment: Alignment.bottomRight,
+                  margin: EdgeInsets.fromLTRB(0, 5, 0, 0),
+                  child: Text(widget.hasSeen
+                      ? "Seen"
+                      : widget.hasReceived
+                      ? "Received"
+                      : "Unseen"),
+                ),
+              )
+            ],
           ),
-          Visibility(
-            visible: widget.isLastSendMessage,
-            child: Container(
-              alignment: Alignment.bottomRight,
-              margin: EdgeInsets.fromLTRB(0, 5, 0, 0),
-              child: Text(widget.hasSeen ? "Seen" : widget.hasReceived? "Received" : "Unseen"),
-            ),
-          )
-        ]),
-      ),
-    );
+        ));
   }
 }
 
@@ -835,8 +1019,8 @@ sendMessage(
     String selectedUserId,
     String messageText,
     String imageUrl,
-    IO.Socket socket, int convsIndex) {
-
+    IO.Socket socket,
+    int convsIndex) {
   List<String> seenBy = <String>[];
   seenBy.add(currentUser.id.toString());
 
@@ -851,12 +1035,10 @@ sendMessage(
       seenBy: seenBy,
       receivedBy: receivedBy,
       imageUrl: imageUrl,
-    reacts: reacts
-  );
+      reacts: reacts);
 
-  convsController.sendMessage(
-      convsController.conversations[convsIndex].id!, convsController.conversations[convsIndex].type!, message, convsIndex);
-
+  convsController.sendMessage(convsController.conversations[convsIndex].id!,
+      convsController.conversations[convsIndex].type!, message, convsIndex);
 }
 
 class ChatMessageTypingField extends StatefulWidget {
@@ -866,24 +1048,23 @@ class ChatMessageTypingField extends StatefulWidget {
   int convsIndex;
   List<String> typingUsersId;
 
-  ChatMessageTypingField(this.convsController, this.currentUser, this.selectedUser, this.socket, this.convsIndex,  this.typingUsersId, { Key? key}) : super(key: key);
+  ChatMessageTypingField(this.convsController, this.currentUser,
+      this.selectedUser, this.socket, this.convsIndex, this.typingUsersId,
+      {Key? key})
+      : super(key: key);
 
   @override
   _ChatMessageTypingFieldState createState() => _ChatMessageTypingFieldState();
 }
-class _ChatMessageTypingFieldState extends State<ChatMessageTypingField> {
 
+class _ChatMessageTypingFieldState extends State<ChatMessageTypingField> {
   TextEditingController messageController = new TextEditingController();
   bool emojiShowing = false;
 
-
   @override
   Widget build(BuildContext context) {
-
-
     return SingleChildScrollView(
       child: Column(
-
         children: [
           Container(
             margin: EdgeInsets.all(15.0),
@@ -905,96 +1086,99 @@ class _ChatMessageTypingFieldState extends State<ChatMessageTypingField> {
                     child: Row(
                       children: [
                         IconButton(
-                            icon: Icon(Icons.face , color: Colors.blueAccent,), onPressed: () async {
-
-                          setState(() {
-                            emojiShowing = !emojiShowing;
-                          });
-
-
-
-                        }),
+                            icon: Icon(
+                              Icons.face,
+                              color: Colors.blueAccent,
+                            ),
+                            onPressed: () async {
+                              setState(() {
+                                emojiShowing = !emojiShowing;
+                              });
+                            }),
                         Expanded(
                           child: TextField(
                             controller: messageController,
                             decoration: InputDecoration(
                                 hintText: "Type Something...",
-                                hintStyle: TextStyle( color:     Colors.blueAccent),
+                                hintStyle: TextStyle(color: Colors.blueAccent),
                                 border: InputBorder.none),
-                            onChanged: (text){
+                            onChanged: (text) {
+                              String typingEvent =
+                                  "typing"; //sending event name...
 
-
-
-
-                              String typingEvent = "typing"; //sending event name...
-
-
-
-
-                              if(text.isEmpty){
-
+                              if (text.isEmpty) {
                                 var json = {
-                                  "convsId": widget.convsController.conversations[widget.convsIndex].id,
-                                  "convsType": widget.convsController.conversations[widget.convsIndex].type,
-                                  "typingUsersId": widget.typingUsersId};
+                                  "convsId": widget.convsController
+                                      .conversations[widget.convsIndex].id,
+                                  "convsType": widget.convsController
+                                      .conversations[widget.convsIndex].type,
+                                  "typingUsersId": widget.typingUsersId
+                                };
 
-                                if(widget.typingUsersId.contains(widget.currentUser.id)){
-                                  widget.typingUsersId.remove(widget.currentUser.id);
+                                if (widget.typingUsersId
+                                    .contains(widget.currentUser.id)) {
+                                  widget.typingUsersId
+                                      .remove(widget.currentUser.id);
                                   json = {
-                                  "convsId": widget.convsController.conversations[widget.convsIndex].id,
-                                  "convsType": widget.convsController.conversations[widget.convsIndex].type,
-                                  "typingUsersId": widget.typingUsersId};
+                                    "convsId": widget.convsController
+                                        .conversations[widget.convsIndex].id,
+                                    "convsType": widget.convsController
+                                        .conversations[widget.convsIndex].type,
+                                    "typingUsersId": widget.typingUsersId
+                                  };
 
                                   widget.socket.emit(typingEvent, json);
-                                }else{
+                                } else {
                                   widget.socket.emit(typingEvent, json);
                                 }
-
-                              }else {
-
+                              } else {
                                 var json = {
-                                  "convsId": widget.convsController.conversations[widget.convsIndex].id,
-                                  "convsType": widget.convsController.conversations[widget.convsIndex].type,
-                                  "typingUsersId": widget.typingUsersId};
+                                  "convsId": widget.convsController
+                                      .conversations[widget.convsIndex].id,
+                                  "convsType": widget.convsController
+                                      .conversations[widget.convsIndex].type,
+                                  "typingUsersId": widget.typingUsersId
+                                };
 
-                                if (!widget.typingUsersId.contains( widget.currentUser.id)){
+                                if (!widget.typingUsersId
+                                    .contains(widget.currentUser.id)) {
+                                  widget.typingUsersId
+                                      .add(widget.currentUser.id!);
 
-                                  widget.typingUsersId.add(widget.currentUser.id!);
+                                  json = {
+                                    "convsId": widget.convsController
+                                        .conversations[widget.convsIndex].id,
+                                    "convsType": widget.convsController
+                                        .conversations[widget.convsIndex].type,
+                                    "typingUsersId": widget.typingUsersId
+                                  };
 
-                                 json = {
-                                  "convsId": widget.convsController.conversations[widget.convsIndex].id,
-                                  "convsType": widget.convsController.conversations[widget.convsIndex].type,
-                                  "typingUsersId": widget.typingUsersId};
-
-                                widget.socket.emit(typingEvent, json);
-                                }else {
+                                  widget.socket.emit(typingEvent, json);
+                                } else {
                                   //widget.socket.emit(typingEvent, json);
                                 }
-
                               }
 
-                              setState(() {
-                              });
-
+                              setState(() {});
                             },
                           ),
                         ),
                         IconButton(
-                          icon: Icon(Icons.photo ,  color: Colors.blueAccent),
+                          icon: Icon(Icons.photo, color: Colors.blueAccent),
                           onPressed: () {
-
                             _openGalleryAndUploadImage(
                                 widget.convsController,
                                 widget.currentUser,
                                 widget.selectedUser.id!,
                                 messageController,
                                 "",
-                                widget.socket, widget.convsIndex);
-
+                                widget.socket,
+                                widget.convsIndex);
                           },
                         ),
                         IconButton(
-                          icon: Icon(Icons.attach_file ,  color: Colors.blueAccent),
+                          icon:
+                              Icon(Icons.attach_file, color: Colors.blueAccent),
                           onPressed: () {},
                         )
                       ],
@@ -1007,33 +1191,41 @@ class _ChatMessageTypingFieldState extends State<ChatMessageTypingField> {
                   decoration: BoxDecoration(
                       color: Colors.blueAccent, shape: BoxShape.circle),
                   child: InkWell(
-                    child: messageController.text.length>0? Icon(Icons.send, color: Colors.white) : Icon(Icons.keyboard_voice, color: Colors.white),
-                    onTap: (){
-                      if(messageController.text.length>0){
+                    child: messageController.text.length > 0
+                        ? Icon(Icons.send, color: Colors.white)
+                        : Icon(Icons.keyboard_voice, color: Colors.white),
+                    onTap: () {
+                      if (messageController.text.length > 0) {
                         //Send Text Message
-                        sendMessage(widget.convsController, widget.currentUser, widget.selectedUser.id!,
-                            messageController.text, "",  widget.socket, widget.convsIndex);
+                        sendMessage(
+                            widget.convsController,
+                            widget.currentUser,
+                            widget.selectedUser.id!,
+                            messageController.text,
+                            "",
+                            widget.socket,
+                            widget.convsIndex);
                         messageController.text = "";
 
-                        if(widget.typingUsersId.contains(widget.currentUser.id)){ //notifying other user that current user is  not typing...
+                        if (widget.typingUsersId
+                            .contains(widget.currentUser.id)) {
+                          //notifying other user that current user is  not typing...
 
                           widget.typingUsersId.remove(widget.currentUser.id);
                           String typingEvent = "typing"; //sending event name...
 
                           var json = {
-                            "convsId": widget.convsController.conversations[widget.convsIndex].id,
-                            "convsType": widget.convsController.conversations[widget.convsIndex].type,
-                            "typingUsersId": widget.typingUsersId};
+                            "convsId": widget.convsController
+                                .conversations[widget.convsIndex].id,
+                            "convsType": widget.convsController
+                                .conversations[widget.convsIndex].type,
+                            "typingUsersId": widget.typingUsersId
+                          };
 
                           widget.socket.emit(typingEvent, json);
-
                         }
-
-                      }else{
+                      } else {
                         //todo...Send Voice Message...
-
-
-
                       }
                     },
                   ),
@@ -1047,18 +1239,12 @@ class _ChatMessageTypingFieldState extends State<ChatMessageTypingField> {
                 height: 250,
                 child: EmojiPicker(
                   textEditingController: messageController,
-                  onEmojiSelected: (category, emoji)=>{
-                  setState(() {
-
-                  })
-                  },
-
+                  onEmojiSelected: (category, emoji) => {setState(() {})},
                   config: Config(
                     columns: 7,
                     // Issue: https://github.com/flutter/flutter/issues/28894
                     emojiSizeMax: 32 *
-                        (foundation.defaultTargetPlatform ==
-                            TargetPlatform.iOS
+                        (foundation.defaultTargetPlatform == TargetPlatform.iOS
                             ? 1.30
                             : 1.0),
 
@@ -1093,9 +1279,7 @@ class _ChatMessageTypingFieldState extends State<ChatMessageTypingField> {
         ],
       ),
     );
-
   }
-
 
   var file;
   void _openGalleryAndUploadImage(
@@ -1105,8 +1289,7 @@ class _ChatMessageTypingFieldState extends State<ChatMessageTypingField> {
       TextEditingController messageController,
       imageUrl,
       IO.Socket socket,
-      int convsIndex
-      ) async {
+      int convsIndex) async {
     file = await ImagePicker()
         .pickImage(source: ImageSource.gallery); //pick an image
     //upload file...
@@ -1129,16 +1312,6 @@ class _ChatMessageTypingFieldState extends State<ChatMessageTypingField> {
   }
 }
 
-abstract class OnMessageSend{
+abstract class OnMessageSend {
   void onMessageSend();
 }
-
-
-
-
-
-
-
-
-
-
