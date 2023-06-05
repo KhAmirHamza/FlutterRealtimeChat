@@ -143,6 +143,7 @@ class _UserWidgetState extends State<UserWidget> {
         imageUrl:
             "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTKTSNwcT2YrRQJKGVQHClGtQgp1_x8kLd0Ig&usqp=CAU",
       reacts: reacts,
+      replyOf: null
     ),
     );
 

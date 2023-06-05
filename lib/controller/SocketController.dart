@@ -109,6 +109,7 @@ sendMessage(String convsId, String convsType,  Message message, int conversation
       'receivedBy': message.receivedBy,
       'imageUrl': message.imageUrl,
       'reacts': message.reacts,
+      'replyOf': message.replyOf,
     }),
     options: Options(headers: header),
   );
@@ -127,6 +128,7 @@ sendMessage(String convsId, String convsType,  Message message, int conversation
       "receivedBy": messageData.receivedBy,
       'imageUrl': messageData.imageUrl,
       'reacts': messageData.reacts,
+      'replyOf': messageData.replyOf,
       'createdAt': messageData.createdAt,
       'updatedAt': messageData.updatedAt,
     };

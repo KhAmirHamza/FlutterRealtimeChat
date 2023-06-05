@@ -32,6 +32,7 @@ import '../model/Conversation.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 
 bool isChatting = true;
+Message? replyMessage;
 
 class pToP_ChatPage extends StatefulWidget implements OnMessageSend {
   // Completely Done for now
@@ -220,7 +221,19 @@ class _pToP_ChatPageState extends State<pToP_ChatPage> {
           elevation: 1,
           leading: BackButton(
             color: Colors.black,
-            onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
+            onPressed: () {
+              //Navigator.of(context, rootNavigator: true).pop();
+            widget.socket.clearListeners();
+
+              Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => ConversationListWidget(
+                      widget.userController,
+                      widget.currentUser,
+                      widget.socket,
+                      widget.convsController)));
+            },
           ),
           backgroundColor: Colors.white,
           title: Align(
@@ -295,7 +308,14 @@ class MessageListWidget extends StatefulWidget {
   State<MessageListWidget> createState() => _MessageListWidgetState();
 }
 
+
 class _MessageListWidgetState extends State<MessageListWidget> {
+
+  refreshRepliedMessage(){
+    setState(() {
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     List<String> ids = widget.typingUsersId;
@@ -371,7 +391,7 @@ class _MessageListWidgetState extends State<MessageListWidget> {
                         isLastSendMessage: isLastSendMessage,
                         convsController: widget.convsController,
                         socket: widget.socket,
-                        currentUser: widget.currentUser),
+                        currentUser: widget.currentUser, refreshRepliedMessage:refreshRepliedMessage,),
                   ],
                 );
               },
@@ -384,13 +404,80 @@ class _MessageListWidgetState extends State<MessageListWidget> {
           flashingCircleBrightColor: Colors.white,
           flashingCircleDarkColor: Colors.blueAccent,
         ),
+
+
+        replyMessage==null? Container():
+        Visibility(
+          visible: replyMessage!=null,
+          child: Container(
+            margin: EdgeInsets.fromLTRB(10,5,10,0),
+            width: double.infinity,
+            child: DecoratedBox(
+
+              // chat bubble decoration
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(children: [
+                      Container(
+                        padding: EdgeInsets.only(left: 10),
+                        child: Text(
+                          replyMessage!.from!.name!,
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyText1!
+                              .copyWith(
+                              color: Colors.black87,
+                              fontSize: 14,
+                              fontWeight:
+                              FontWeight.w400),
+                        ),
+                      ), 
+                      Expanded(
+                        child: Container(
+                          alignment: Alignment.topRight,
+                          padding: const EdgeInsets.all(8.0),
+                          child: InkWell(onTap: (){
+                            replyMessage = null;
+                            refreshRepliedMessage();
+                          }, child: Icon(Icons.close, size: 20,)),
+                        ),
+                      )
+                    ],),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(10, 0, 0, 10),
+                      child: (replyMessage!.imageUrl != null &&
+                          replyMessage!.imageUrl!.length > 0)
+                          ? Image.network(
+                          replyMessage!.imageUrl.toString())
+                          : Text(
+                        replyMessage!.text.toString(),
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodyText1!
+                            .copyWith(
+                            color: Colors.black87,
+                            fontSize: 12,
+                            fontWeight:
+                            FontWeight.w400),
+                      ),
+                    ),
+                  ],
+                )),
+          ),
+        ),
+
         ChatMessageTypingField(
             widget.convsController,
             widget.currentUser,
             widget.selectedUser,
             widget.socket,
             widget.convsIndex,
-            widget.typingUsersId),
+            widget.typingUsersId, refreshRepliedMessage),
       ],
     );
   }
@@ -408,7 +495,7 @@ int getLastSendMessageIndex(String currentUserId, List<Message> items) {
 }
 
 class ChatBubble extends StatefulWidget {
-  const ChatBubble({
+  ChatBubble({
     Key? key,
     required this.messageIndex,
     required this.convsIndex,
@@ -419,6 +506,7 @@ class ChatBubble extends StatefulWidget {
     required this.convsController,
     required this.socket,
     required this.currentUser,
+    required this.refreshRepliedMessage,
   }) : super(key: key);
   final int messageIndex;
   final int convsIndex;
@@ -429,6 +517,8 @@ class ChatBubble extends StatefulWidget {
   final ConversationController convsController;
   final IO.Socket socket;
   final User currentUser;
+
+  Function() refreshRepliedMessage;
 
   @override
   State<ChatBubble> createState() => _ChatBubbleState();
@@ -445,37 +535,6 @@ class _ChatBubbleState extends State<ChatBubble> {
       print(_tapPosition);
     });
   }
-
-  // void _showContextMenu(BuildContext context) async {
-  //   final RenderObject? overlay =
-  //   Overlay.of(context)?.context.findRenderObject();
-  //   final result = await showMenu(
-  //       context: context,
-  //       position: RelativeRect.fromRect(
-  //           Rect.fromLTWH(_tapPosition.dx, _tapPosition.dy, 100, 100),
-  //           Rect.fromLTWH(0, 0, overlay!.paintBounds.size.width,
-  //               overlay!.paintBounds.size.height)),
-  //       items: [
-  //         const PopupMenuItem(
-  //           child: Text('Add Me'),
-  //           value: "fav",
-  //         ),
-  //         const PopupMenuItem(
-  //           child: Text('Close'),
-  //           value: "close",
-  //         )
-  //       ]);
-  //   // perform action on selected menu item
-  //   switch (result) {
-  //     case 'fav':
-  //       print("fav");
-  //       break;
-  //     case 'close':
-  //       print('close');
-  //       Navigator.pop(context);
-  //       break;
-  //   }
-  // }
 
   @override
   Widget build(BuildContext context) {
@@ -512,7 +571,7 @@ class _ChatBubbleState extends State<ChatBubble> {
           ),
           color: Colors.transparent,
           position: RelativeRect.fromRect(
-              Rect.fromLTWH(x, y, 100, 100),
+              Rect.fromLTWH(x, y-20, 100, 100),
               Rect.fromLTWH(0, 0, overlay!.paintBounds.size.width,
                   overlay.paintBounds.size.height)),
           items: [
@@ -521,7 +580,7 @@ class _ChatBubbleState extends State<ChatBubble> {
               value: "fav",
               child: AnimatedContainer(
                 width: 250,
-                padding: EdgeInsets.all(5),
+                padding: EdgeInsets.fromLTRB(5, 35, 5, 25),
                 duration: const Duration(milliseconds: 1000),
                 // Provide an optional curve to make the animation feel smoother.
                 decoration: BoxDecoration(
@@ -536,257 +595,366 @@ class _ChatBubbleState extends State<ChatBubble> {
                 ),
                 curve: Curves.fastOutSlowIn,
 
-                child: Row(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.max,
                   children: [
-                    Container(
-                      margin: const EdgeInsets.fromLTRB(5, 10, 0, 0),
-                      //  padding: EdgeInsets.all(2),
-                      height: 40,
-                      width: 40,
-                      child: FloatingActionButton(
-                          heroTag: 'btn1',
-                          tooltip: 'Secret Chat',
-                          backgroundColor: Colors.transparent,
-                          foregroundColor: Colors.white,
-                          splashColor: Colors.blue,
-                          elevation: 0,
-                          child: Container(
-                            decoration: BoxDecoration(
-                                color: Colors.blue,
-                                borderRadius: BorderRadius.circular(25)),
-                            // padding: EdgeInsets.all(2.5),
-                            child: ClipOval(
-                              child: Image.network(
-                                'https://www.gifcen.com/wp-content/uploads/2022/05/thumbs-up-gif-7.gif',
-                                width: 30,
-                                height: 30,
-                                fit: BoxFit.cover,
+                    Row(
+                      children: [
+                        Container(
+                          margin: const EdgeInsets.fromLTRB(10, 10, 0, 0),
+                          //  padding: EdgeInsets.all(2),
+                          height: 40,
+                          width: 40,
+                          child: FloatingActionButton(
+                              heroTag: 'btn1',
+                              tooltip: 'Secret Chat',
+                              backgroundColor: Colors.transparent,
+                              foregroundColor: Colors.white,
+                              splashColor: Colors.blue,
+                              elevation: 0,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                    color: Colors.blue,
+                                    borderRadius: BorderRadius.circular(25)),
+                                // padding: EdgeInsets.all(2.5),
+                                child: ClipOval(
+                                  child: Image.network(
+                                    'https://www.gifcen.com/wp-content/uploads/2022/05/thumbs-up-gif-7.gif',
+                                    width: 30,
+                                    height: 30,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
                               ),
-                            ),
-                          ),
-                          onPressed: () {
-                            List<React> reacts = widget
-                                .convsController
-                                .conversations[widget.convsIndex]
-                                .messages![widget.messageIndex]
-                                .reacts!;
-                            // React r = reacts.firstWhere((it) => it.userId == widget.currentUser.id);
-                            if (!reacts.any((item) =>
-                                item.userId == widget.currentUser.id)) {
-                              widget.convsController.addReactUpdateConvs(
-                                  widget.convsIndex,
-                                  widget.messageIndex,
-                                  widget.convsController
-                                      .conversations[widget.convsIndex].id!,
-                                  widget.convsController
-                                      .conversations[widget.convsIndex].type!,
-                                  message.id!,
-                                  "like",
-                                  widget.socket,
-                                  widget.currentUser.id!);
-                            }
-                            Navigator.pop(context);
-                          }),
+                              onPressed: () {
+                                List<React> reacts = widget
+                                    .convsController
+                                    .conversations[widget.convsIndex]
+                                    .messages![widget.messageIndex]
+                                    .reacts!;
+                                // React r = reacts.firstWhere((it) => it.userId == widget.currentUser.id);
+                                if (!reacts.any((item) =>
+                                    item.userId == widget.currentUser.id)) {
+                                  widget.convsController.addReactUpdateConvs(
+                                      widget.convsIndex,
+                                      widget.messageIndex,
+                                      widget.convsController
+                                          .conversations[widget.convsIndex].id!,
+                                      widget
+                                          .convsController
+                                          .conversations[widget.convsIndex]
+                                          .type!,
+                                      message.id!,
+                                      "like",
+                                      widget.socket,
+                                      widget.currentUser.id!);
+                                }
+                                Navigator.pop(context);
+                              }),
+                        ),
+                        Container(
+                          margin: const EdgeInsets.fromLTRB(5, 10, 0, 0),
+                          //   padding: EdgeInsets.all(2),
+                          height: 40,
+                          width: 40,
+                          child: FloatingActionButton(
+                              heroTag: 'btn1',
+                              tooltip: 'Secret Chat',
+                              backgroundColor: Colors.transparent,
+                              foregroundColor: Colors.white,
+                              splashColor: Colors.blueAccent,
+                              elevation: 0,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(25)),
+                                child: ClipOval(
+                                  child: Image.network(
+                                    'https://cdn.pixabay.com/animation/2022/10/28/19/23/19-23-08-315_512.gif',
+                                    fit: BoxFit.fitHeight,
+                                    width: 30,
+                                    height: 30,
+                                  ),
+                                ),
+                              ),
+                              onPressed: () {
+                                List<React> reacts = widget
+                                    .convsController
+                                    .conversations[widget.convsIndex]
+                                    .messages![widget.messageIndex]
+                                    .reacts!;
+                                // React r = reacts.firstWhere((it) => it.userId == widget.currentUser.id);
+                                if (!reacts.any((item) =>
+                                    item.userId == widget.currentUser.id)) {
+                                  widget.convsController.addReactUpdateConvs(
+                                      widget.convsIndex,
+                                      widget.messageIndex,
+                                      widget.convsController
+                                          .conversations[widget.convsIndex].id!,
+                                      widget
+                                          .convsController
+                                          .conversations[widget.convsIndex]
+                                          .type!,
+                                      message.id!,
+                                      "Love",
+                                      widget.socket,
+                                      widget.currentUser.id!);
+                                }
+                                Navigator.pop(context);
+                              }),
+                        ),
+                        Container(
+                          margin: const EdgeInsets.fromLTRB(5, 10, 0, 0),
+                          height: 40,
+                          width: 40,
+                          child: FloatingActionButton(
+                              heroTag: 'btn1',
+                              tooltip: 'Secret Chat',
+                              backgroundColor: Colors.transparent,
+                              foregroundColor: Colors.white,
+                              splashColor: Colors.blueAccent,
+                              elevation: 0,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(25)),
+                                // padding: EdgeInsets.all(2.5),
+                                child: ClipOval(
+                                  child: Image.network(
+                                    'https://gifdb.com/images/high/cute-finger-heart-hop7csjnvi37i29e.gif',
+                                    width: 30,
+                                    height: 30,
+                                    fit: BoxFit.fitHeight,
+                                  ),
+                                ),
+                              ),
+                              onPressed: () {
+                                List<React> reacts = widget
+                                    .convsController
+                                    .conversations[widget.convsIndex]
+                                    .messages![widget.messageIndex]
+                                    .reacts!;
+                                // React r = reacts.firstWhere((it) => it.userId == widget.currentUser.id);
+                                if (!reacts.any((item) =>
+                                    item.userId == widget.currentUser.id)) {
+                                  widget.convsController.addReactUpdateConvs(
+                                      widget.convsIndex,
+                                      widget.messageIndex,
+                                      widget.convsController
+                                          .conversations[widget.convsIndex].id!,
+                                      widget
+                                          .convsController
+                                          .conversations[widget.convsIndex]
+                                          .type!,
+                                      message.id!,
+                                      "Support",
+                                      widget.socket,
+                                      widget.currentUser.id!);
+                                }
+                                Navigator.pop(context);
+                              }),
+                        ),
+                        Container(
+                          margin: const EdgeInsets.fromLTRB(5, 10, 0, 0),
+                          height: 40,
+                          width: 40,
+                          child: FloatingActionButton(
+                              heroTag: 'btn1',
+                              backgroundColor: Colors.transparent,
+                              foregroundColor: Colors.white,
+                              splashColor: Colors.blueAccent,
+                              elevation: 0,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(25)),
+                                // padding: EdgeInsets.all(2.5),
+                                child: ClipOval(
+                                  child: Image.network(
+                                    'https://i.pinimg.com/originals/b8/fe/79/b8fe7956472296b40f3ce7a7e7d68108.gif',
+                                    width: 30,
+                                    height: 30,
+                                    fit: BoxFit.fitHeight,
+                                  ),
+                                ),
+                              ),
+                              onPressed: () {
+                                List<React> reacts = widget
+                                    .convsController
+                                    .conversations[widget.convsIndex]
+                                    .messages![widget.messageIndex]
+                                    .reacts!;
+                                // React r = reacts.firstWhere((it) => it.userId == widget.currentUser.id);
+                                if (!reacts.any((item) =>
+                                    item.userId == widget.currentUser.id)) {
+                                  widget.convsController.addReactUpdateConvs(
+                                      widget.convsIndex,
+                                      widget.messageIndex,
+                                      widget.convsController
+                                          .conversations[widget.convsIndex].id!,
+                                      widget
+                                          .convsController
+                                          .conversations[widget.convsIndex]
+                                          .type!,
+                                      message.id!,
+                                      "Hate",
+                                      widget.socket,
+                                      widget.currentUser.id!);
+                                }
+                                Navigator.pop(context);
+                              }),
+                        ),
+                        Container(
+                          margin: const EdgeInsets.fromLTRB(0, 10, 5, 0),
+                          height: 40,
+                          width: 40,
+                          child: FloatingActionButton(
+                              heroTag: 'btn1',
+                              tooltip: 'Secret Chat',
+                              backgroundColor: Colors.transparent,
+                              foregroundColor: Colors.white,
+                              splashColor: Colors.blueAccent,
+                              elevation: 0,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(25)),
+                                // padding: EdgeInsets.all(2.5),
+                                child: ClipOval(
+                                  child: Image.network(
+                                    'https://media.tenor.com/l5_u4JytFLYAAAAC/wow-emoji.gif',
+                                    width: 30,
+                                    height: 30,
+                                    fit: BoxFit.fitHeight,
+                                  ),
+                                ),
+                              ),
+                              onPressed: () {
+                                List<React> reacts = widget
+                                    .convsController
+                                    .conversations[widget.convsIndex]
+                                    .messages![widget.messageIndex]
+                                    .reacts!;
+                                // React r = reacts.firstWhere((it) => it.userId == widget.currentUser.id);
+                                if (!reacts.any((item) =>
+                                    item.userId == widget.currentUser.id)) {
+                                  widget.convsController.addReactUpdateConvs(
+                                      widget.convsIndex,
+                                      widget.messageIndex,
+                                      widget.convsController
+                                          .conversations[widget.convsIndex].id!,
+                                      widget
+                                          .convsController
+                                          .conversations[widget.convsIndex]
+                                          .type!,
+                                      message.id!,
+                                      "Surprised",
+                                      widget.socket,
+                                      widget.currentUser.id!);
+                                }
+                                Navigator.pop(context);
+                              }),
+                        ),
+                      ],
                     ),
                     Container(
-                      margin: const EdgeInsets.fromLTRB(5, 10, 0, 0),
-                      //   padding: EdgeInsets.all(2),
-                      height: 40,
-                      width: 40,
-                      child: FloatingActionButton(
-                          heroTag: 'btn1',
-                          tooltip: 'Secret Chat',
-                          backgroundColor: Colors.transparent,
-                          foregroundColor: Colors.white,
-                          splashColor: Colors.blueAccent,
-                          elevation: 0,
-                          child: Container(
-                            decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(25)),
-                            child: ClipOval(
-                              child: Image.network(
-                                'https://cdn.pixabay.com/animation/2022/10/28/19/23/19-23-08-315_512.gif',
-                                fit: BoxFit.fitHeight,
-                                width: 30,
-                                height: 30,
-                              ),
-                            ),
+                      margin: EdgeInsets.only(top: 10),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: <Widget>[
+                          Expanded(
+                              child: InkWell(
+                                onTap: (){
+                                  replyMessage = message;
+                                  // ReplyOf replyData = ReplyOf(
+                                  //     id: replyMessage!.id,
+                                  //     from: replyMessage!.from,
+                                  //     to: replyMessage!.to,
+                                  //     senderName: replyMessage!.from!.name,
+                                  //     text: replyMessage!.text, imageUrl: replyMessage!.imageUrl);
+                                  // replyMessage!.replyOf = replyData;
+
+                                  /*
+                                  Message(id: "abcd", from: widget.currentUser,
+                                      to: message.from!.id==widget.currentUser.id? message.to: message.from!.id,
+                                  "messageText",*/
+
+                                  //)
+                                  //widget.convsController.conversations[widget.convsIndex].messages!.add(replyMessage!);
+                                  //widget.convsController.conversations.refresh();
+
+                                  Navigator.pop(context);
+                                  widget.refreshRepliedMessage();
+                                },
+                                child: Column(
+                            children: [
+                                Align(
+                                  alignment: Alignment.center,
+                                  child: Icon(Icons.message_rounded, size: 20,),
+                                ),
+                                Text("Reply",
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                        fontSize: 12, color: Colors.black))
+                            ],
                           ),
-                          onPressed: () {
-                            List<React> reacts = widget
-                                .convsController
-                                .conversations[widget.convsIndex]
-                                .messages![widget.messageIndex]
-                                .reacts!;
-                            // React r = reacts.firstWhere((it) => it.userId == widget.currentUser.id);
-                            if (!reacts.any((item) =>
-                                item.userId == widget.currentUser.id)) {
-                              widget.convsController.addReactUpdateConvs(
-                                  widget.convsIndex,
-                                  widget.messageIndex,
-                                  widget.convsController
-                                      .conversations[widget.convsIndex].id!,
-                                  widget.convsController
-                                      .conversations[widget.convsIndex].type!,
-                                  message.id!,
-                                  "Love",
-                                  widget.socket,
-                                  widget.currentUser.id!);
-                            }
-                            Navigator.pop(context);
-                          }),
-                    ),
-                    Container(
-                      margin: const EdgeInsets.fromLTRB(5, 10, 0, 0),
-                      height: 40,
-                      width: 40,
-                      child: FloatingActionButton(
-                          heroTag: 'btn1',
-                          tooltip: 'Secret Chat',
-                          backgroundColor: Colors.transparent,
-                          foregroundColor: Colors.white,
-                          splashColor: Colors.blueAccent,
-                          elevation: 0,
-                          child: Container(
-                            decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(25)),
-                            // padding: EdgeInsets.all(2.5),
-                            child: ClipOval(
-                              child: Image.network(
-                                'https://gifdb.com/images/high/cute-finger-heart-hop7csjnvi37i29e.gif',
-                                width: 30,
-                                height: 30,
-                                fit: BoxFit.fitHeight,
+                              )),
+                          Expanded(
+                              child: Column(
+                            children: [
+                              Align(
+                                alignment: Alignment.center,
+                                child: Icon(Icons.forward, size: 20,),
                               ),
-                            ),
-                          ),
-                          onPressed: () {
-                            List<React> reacts = widget
-                                .convsController
-                                .conversations[widget.convsIndex]
-                                .messages![widget.messageIndex]
-                                .reacts!;
-                            // React r = reacts.firstWhere((it) => it.userId == widget.currentUser.id);
-                            if (!reacts.any((item) =>
-                                item.userId == widget.currentUser.id)) {
-                              widget.convsController.addReactUpdateConvs(
-                                  widget.convsIndex,
-                                  widget.messageIndex,
-                                  widget.convsController
-                                      .conversations[widget.convsIndex].id!,
-                                  widget.convsController
-                                      .conversations[widget.convsIndex].type!,
-                                  message.id!,
-                                  "Support",
-                                  widget.socket,
-                                  widget.currentUser.id!);
-                            }
-                            Navigator.pop(context);
-                          }),
-                    ),
-                    Container(
-                      margin: const EdgeInsets.fromLTRB(5, 10, 0, 0),
-                      height: 40,
-                      width: 40,
-                      child: FloatingActionButton(
-                          heroTag: 'btn1',
-                          backgroundColor: Colors.transparent,
-                          foregroundColor: Colors.white,
-                          splashColor: Colors.blueAccent,
-                          elevation: 0,
-                          child: Container(
-                            decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(25)),
-                            // padding: EdgeInsets.all(2.5),
-                            child: ClipOval(
-                              child: Image.network(
-                                'https://i.pinimg.com/originals/b8/fe/79/b8fe7956472296b40f3ce7a7e7d68108.gif',
-                                width: 30,
-                                height: 30,
-                                fit: BoxFit.fitHeight,
+                              Text("Forward",
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                      fontSize: 12, color: Colors.black))
+                            ],
+                          )),
+                          Expanded(
+                              child: Column(
+                            children: [
+                              Align(
+                                alignment: Alignment.center,
+                                child: Icon(Icons.copy, size: 20,),
                               ),
-                            ),
-                          ),
-                          onPressed: () {
-                            List<React> reacts = widget
-                                .convsController
-                                .conversations[widget.convsIndex]
-                                .messages![widget.messageIndex]
-                                .reacts!;
-                            // React r = reacts.firstWhere((it) => it.userId == widget.currentUser.id);
-                            if (!reacts.any((item) =>
-                                item.userId == widget.currentUser.id)) {
-                              widget.convsController.addReactUpdateConvs(
-                                  widget.convsIndex,
-                                  widget.messageIndex,
-                                  widget.convsController
-                                      .conversations[widget.convsIndex].id!,
-                                  widget.convsController
-                                      .conversations[widget.convsIndex].type!,
-                                  message.id!,
-                                  "Hate",
-                                  widget.socket,
-                                  widget.currentUser.id!);
-                            }
-                            Navigator.pop(context);
-                          }),
-                    ),
-                    Container(
-                      margin: const EdgeInsets.fromLTRB(0, 10, 5, 0),
-                      height: 40,
-                      width: 40,
-                      child: FloatingActionButton(
-                          heroTag: 'btn1',
-                          tooltip: 'Secret Chat',
-                          backgroundColor: Colors.transparent,
-                          foregroundColor: Colors.white,
-                          splashColor: Colors.blueAccent,
-                          elevation: 0,
-                          child: Container(
-                            decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(25)),
-                            // padding: EdgeInsets.all(2.5),
-                            child: ClipOval(
-                              child: Image.network(
-                                'https://media.tenor.com/l5_u4JytFLYAAAAC/wow-emoji.gif',
-                                width: 30,
-                                height: 30,
-                                fit: BoxFit.fitHeight,
-                              ),
-                            ),
-                          ),
-                          onPressed: () {
-                            List<React> reacts = widget
-                                .convsController
-                                .conversations[widget.convsIndex]
-                                .messages![widget.messageIndex]
-                                .reacts!;
-                            // React r = reacts.firstWhere((it) => it.userId == widget.currentUser.id);
-                            if (!reacts.any((item) =>
-                                item.userId == widget.currentUser.id)) {
-                              widget.convsController.addReactUpdateConvs(
-                                  widget.convsIndex,
-                                  widget.messageIndex,
-                                  widget.convsController
-                                      .conversations[widget.convsIndex].id!,
-                                  widget.convsController
-                                      .conversations[widget.convsIndex].type!,
-                                  message.id!,
-                                  "Surprised",
-                                  widget.socket,
-                                  widget.currentUser.id!);
-                            }
-                            Navigator.pop(context);
-                          }),
-                    ),
+                              Text("Copy",
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                      fontSize: 12, color: Colors.black))
+                            ],
+                          )),
+                        ],
+                      ),
+                    )
                   ],
                 ),
               ),
-            )
+            ),
+            /*  PopupMenuItem(
+                padding: EdgeInsets.symmetric(vertical: 7),
+                value: "fav",
+                child: Container(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: <Widget>[
+                    Expanded(child: Column(children: [
+                      Align(alignment: Alignment.center, child: Icon(Icons.message_rounded),),
+                      Text("Reply", textAlign: TextAlign.center,style: TextStyle(fontSize: 14,color: Colors.black))
+                    ],)),
+                    Expanded(child: Column(children: [
+                      Align(alignment: Alignment.center, child: Icon(Icons.forward),),
+                      Text("Forward", textAlign: TextAlign.center,style: TextStyle(fontSize: 14,color: Colors.black))
+                    ],)),
+                    Expanded(child: Column(children: [
+                      Align(alignment: Alignment.center, child: Icon(Icons.copy),),
+                      Text("Reply", textAlign: TextAlign.center, style: TextStyle(fontSize: 14,color: Colors.black))
+                    ],)),
+                  ],
+                  ),
+                ))*/
           ]);
       // perform action on selected menu item
       switch (result) {
@@ -799,23 +967,25 @@ class _ChatBubbleState extends State<ChatBubble> {
           break;
       }
     }
+
     int like = 0, love = 0, support = 0, surprised = 0, hate = 0;
     int reactCount = message.reacts!.length;
 
-    for(int i=0; i<reactCount; i++){
-      if(message.reacts![i].title!.toLowerCase()=='like'){
+    for (int i = 0; i < reactCount; i++) {
+      if (message.reacts![i].title!.toLowerCase() == 'like') {
         like++;
-      }else if(message.reacts![i].title!.toLowerCase()=='love'){
+      } else if (message.reacts![i].title!.toLowerCase() == 'love') {
         love++;
-      }else if(message.reacts![i].title!.toLowerCase()=='support'){
+      } else if (message.reacts![i].title!.toLowerCase() == 'support') {
         support++;
-      }else if(message.reacts![i].title!.toLowerCase()=='surprised'){
+      } else if (message.reacts![i].title!.toLowerCase() == 'surprised') {
         surprised++;
-      }else if(message.reacts![i].title!.toLowerCase()=='hate'){
+      } else if (message.reacts![i].title!.toLowerCase() == 'hate') {
         hate++;
       }
     }
 
+    int replyMessagebottomPadding = message.replyOf!=null?5:12;
 
     return GestureDetector(
         //onTapDown: (position) => {_getTapPosition(position)},
@@ -830,203 +1000,289 @@ class _ChatBubbleState extends State<ChatBubble> {
               _showPopUpMenuAtPosition(x, y, widget.isCurrentUser)
             },
         child: Container(
-          alignment:  widget.isCurrentUser
-        ? Alignment.centerRight
-            : Alignment.centerLeft,
-          padding:  EdgeInsets.fromLTRB(
-              widget.isCurrentUser ? 64.0 : 16.0,
-              4,
-              widget.isCurrentUser ? 16.0 : 64.0,
-              4),
+          alignment: widget.isCurrentUser
+              ? Alignment.centerRight
+              : Alignment.centerLeft,
+          padding: EdgeInsets.fromLTRB(widget.isCurrentUser ? 64.0 : 16.0, 4,
+              widget.isCurrentUser ? 16.0 : 64.0, 4),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+            crossAxisAlignment: widget.isCurrentUser?CrossAxisAlignment.end: CrossAxisAlignment.start,
             children: [
+              Visibility(
+                visible: message.replyOf!=null,
+                child: message.replyOf==null?
+                Container():
+                Opacity(
+                  opacity: .8,
+                  child: Container(
+                    margin: EdgeInsets.fromLTRB(10, 0, 0, 0),
+                    padding: EdgeInsets.fromLTRB(7,7,7,14),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(15),
+                      color:  Colors.grey[200],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: EdgeInsets.fromLTRB(0,5,0,5),
+                          child: Text(
+                            "Replied ${message.replyOf!.from!.name!}'s Messages",
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyText1!
+                                .copyWith(
+                                color: Color(Colors.grey[600]!.value),
+                                fontSize: 12,
+                                fontWeight:
+                                FontWeight.w400),
+
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(0, 5, 0, 5),
+                          child: (message.replyOf!.imageUrl != null &&
+                              message.replyOf!.imageUrl!.length > 0)
+                              ? Image.network(
+                              message.replyOf!.imageUrl.toString())
+                              : Text(
+                            message.replyOf!.text.toString(),
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyText1!
+                                .copyWith(
+                                color: Colors.grey[600],
+                                fontSize: 16,
+                                fontWeight:
+                                FontWeight.w400),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
               IntrinsicWidth(
                 stepWidth: 0,
                 child: Stack(
                   alignment: Alignment.bottomRight,
-                 // crossAxisAlignment: CrossAxisAlignment.end,
+                  // crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Padding(
                       padding: EdgeInsets.fromLTRB(
-                          widget.isCurrentUser ? 5 : 10,
-                          0,
-                          0,
-                          15),
+                          widget.isCurrentUser ? 5 : 10, 0, 0, 0),
                       child: Column(
+                        crossAxisAlignment: widget.isCurrentUser? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.end,
                         children: [
-                          DecoratedBox(
-                              // chat bubble decoration
-                              decoration: BoxDecoration(
-                                color: widget.isCurrentUser
-                                    ? Colors.blue
-                                    : Colors.grey[300],
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: Column(
-                                children: [
-                                  Padding(
-                                    padding: const EdgeInsets.all(12),
-                                    child: (message.imageUrl != null &&
-                                            message.imageUrl!.length > 0)
-                                        ? Image.network(
-                                            message.imageUrl.toString())
-                                        : Text(
+
+                        Transform.translate(
+                          offset: const Offset(0, -10),
+                          child: Row(
+                            mainAxisAlignment: widget.isCurrentUser? MainAxisAlignment.end : MainAxisAlignment.start,
+
+                            children: [
+                              DecoratedBox(
+                                // chat bubble decoration
+                                  decoration: BoxDecoration(
+                                    color: widget.isCurrentUser
+                                        ? Colors.blue[700]
+                                        : Colors.grey[300],
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: widget.isCurrentUser? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                                    children: [
+                                      Align(
+                                        alignment: Alignment.centerLeft,
+                                        child: Padding(
+                                          padding: EdgeInsets.fromLTRB(12,(message.replyOf!=null)? 7:12, 12,12),
+                                          child: (message.imageUrl != null &&
+                                              message.imageUrl!.length > 0)
+                                              ? Image.network(
+                                              message.imageUrl.toString())
+                                              : Text(
                                             message.text.toString(),
                                             style: Theme.of(context)
                                                 .textTheme
                                                 .bodyText1!
                                                 .copyWith(
-                                                    color: widget.isCurrentUser
-                                                        ? Colors.white
-                                                        : Colors.black87
-                                            ,fontSize: 16,
-                                            fontWeight:FontWeight.w400),
+                                                color: widget.isCurrentUser
+                                                    ? Colors.white
+                                                    : Colors.black87,
+                                                fontSize: 16,
+                                                fontWeight:
+                                                FontWeight.normal),
                                           ),
-                                  ),
-                                ],
-                              )),
-                        ],
-                      ),
+                                        ),
+                                      ),
+
+                                    ],
+                                  ))
+                            ],
+                          ),
+                        ),
+                      ],),
                     ),
                     Positioned(
-                      bottom: 5,
-                      child: Row(children: [
-                        Visibility(
-                          visible: like>0,
-                          child: Container(
-                            margin: EdgeInsets.only(right: 1),
-                            decoration: BoxDecoration(
-                                shape: BoxShape.circle),
-                            // padding: EdgeInsets.all(2.5),
-                            child: ClipOval(
-                              child: Image.network(
-                                'https://www.gifcen.com/wp-content/uploads/2022/05/thumbs-up-gif-7.gif',
-                                width: 20,
-                                height: 20,
-                                fit: BoxFit.cover,
+                        bottom: 0,
+                        right: 5,
+                        child: Row(
+                          children: [
+                            Visibility(
+                              visible: like > 0,
+                              child: Container(
+                                margin: EdgeInsets.only(right: 1),
+                                decoration:
+                                    BoxDecoration(shape: BoxShape.circle),
+                                // padding: EdgeInsets.all(2.5),
+                                child: ClipOval(
+                                  child: Image.network(
+                                    'https://www.gifcen.com/wp-content/uploads/2022/05/thumbs-up-gif-7.gif',
+                                    width: 20,
+                                    height: 20,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
-                        ),
-                        Visibility(
-                          visible: love>0,
-                          child: Container(
-                            margin: EdgeInsets.only(right: 1),
-                            decoration: BoxDecoration(
-                                shape: BoxShape.circle),
-                            // padding: EdgeInsets.all(2.5),
-                            child: ClipOval(
-                              child: Image.network(
-                                'https://cdn.pixabay.com/animation/2022/10/28/19/23/19-23-08-315_512.gif',
-                                width: 20,
-                                height: 20,
-                                fit: BoxFit.cover,
+                            Visibility(
+                              visible: love > 0,
+                              child: Container(
+                                margin: EdgeInsets.only(right: 1),
+                                decoration:
+                                    BoxDecoration(shape: BoxShape.circle),
+                                // padding: EdgeInsets.all(2.5),
+                                child: ClipOval(
+                                  child: Image.network(
+                                    'https://cdn.pixabay.com/animation/2022/10/28/19/23/19-23-08-315_512.gif',
+                                    width: 20,
+                                    height: 20,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
-                        ),
-                        Visibility(
-                          visible: surprised>0,
-                          child: Container(
-                            margin: EdgeInsets.only(right: 1),
-                            decoration: BoxDecoration(
-                                shape: BoxShape.circle),
-                            // padding: EdgeInsets.all(2.5),
-                            child: ClipOval(
-                              child: Image.network(
-                                'https://media.tenor.com/l5_u4JytFLYAAAAC/wow-emoji.gif',
-                                width: 20,
-                                height: 20,
-                                fit: BoxFit.cover,
+                            Visibility(
+                              visible: surprised > 0,
+                              child: Container(
+                                margin: EdgeInsets.only(right: 1),
+                                decoration:
+                                    BoxDecoration(shape: BoxShape.circle),
+                                // padding: EdgeInsets.all(2.5),
+                                child: ClipOval(
+                                  child: Image.network(
+                                    'https://media.tenor.com/l5_u4JytFLYAAAAC/wow-emoji.gif',
+                                    width: 20,
+                                    height: 20,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
-                        ),
-                        Visibility(
-                          visible: hate>0,
-                          child: Container(
-                            margin: EdgeInsets.only(right: 1),
-                            decoration: BoxDecoration(
-                                shape: BoxShape.circle),
-                            // padding: EdgeInsets.all(2.5),
-                            child: ClipOval(
-                              child: Image.network(
-                                'https://i.pinimg.com/originals/b8/fe/79/b8fe7956472296b40f3ce7a7e7d68108.gif',
-                                width: 20,
-                                height: 20,
-                                fit: BoxFit.cover,
+                            Visibility(
+                              visible: hate > 0,
+                              child: Container(
+                                margin: EdgeInsets.only(right: 1),
+                                decoration:
+                                    BoxDecoration(shape: BoxShape.circle),
+                                // padding: EdgeInsets.all(2.5),
+                                child: ClipOval(
+                                  child: Image.network(
+                                    'https://i.pinimg.com/originals/b8/fe/79/b8fe7956472296b40f3ce7a7e7d68108.gif',
+                                    width: 20,
+                                    height: 20,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
-                        ),
-                        Visibility(
-                          visible: support>0,
-                          child: Container(
-                            margin: EdgeInsets.only(right: 1),
-                            decoration: BoxDecoration(
-                                shape: BoxShape.circle),
-                            // padding: EdgeInsets.all(2.5),
-                            child: ClipOval(
-                              child: Image.network(
-                                'https://gifdb.com/images/high/cute-finger-heart-hop7csjnvi37i29e.gif',
-                                width: 20,
-                                height: 20,
-                                fit: BoxFit.cover,
+                            Visibility(
+                              visible: support > 0,
+                              child: Container(
+                                margin: EdgeInsets.only(right: 1),
+                                decoration:
+                                    BoxDecoration(shape: BoxShape.circle),
+                                // padding: EdgeInsets.all(2.5),
+                                child: ClipOval(
+                                  child: Image.network(
+                                    'https://gifdb.com/images/high/cute-finger-heart-hop7csjnvi37i29e.gif',
+                                    width: 20,
+                                    height: 20,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
-                        ),
-                        Visibility(
-                          visible: reactCount>0,
-                          child: Container(
-                            margin: EdgeInsets.only(right: 1),
-                            decoration: BoxDecoration(
-                                shape: BoxShape.circle),
-                            // padding: EdgeInsets.all(2.5),
-                            child: ClipOval(
-                              child: Text(reactCount.toString()),
+                            Visibility(
+                              visible: reactCount > 0,
+                              child: Container(
+                                margin: EdgeInsets.only(right: 1),
+                                decoration:
+                                    BoxDecoration(shape: BoxShape.circle,
+                                    color: Colors.white,),
+                                 padding: EdgeInsets.all(5),
+                                child: ClipOval(
+                                  child: Text(reactCount.toString(), ),
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
-                      ],)
-                    )
+                          ],
+                        ))
                   ],
                 ),
               ),
               Visibility(
                 visible: widget.isLastSendMessage,
                 child: Container(
-
                   alignment: Alignment.bottomRight,
                   margin: EdgeInsets.fromLTRB(0, 5, 0, 0),
                   child: Text(widget.hasSeen
                       ? "Seen"
                       : widget.hasReceived
-                      ? "Received"
-                      : "Unseen"),
+                          ? "Received"
+                          : "Unseen"),
                 ),
-              )
+              ),
+
+
+
             ],
           ),
         ));
   }
 }
 
-sendMessage(
+ sendMessage (
     ConversationController convsController,
     User currentUser,
     String selectedUserId,
     String messageText,
     String imageUrl,
     IO.Socket socket,
-    int convsIndex) {
+    int convsIndex,
+     Function() refreshRepliedMessage,
+     BuildContext context) async {
+
   List<String> seenBy = <String>[];
   seenBy.add(currentUser.id.toString());
 
   List<String> receivedBy = <String>[];
   receivedBy.add(currentUser.id.toString());
   List<React> reacts = <React>[];
+
+  ReplyOf? replyData;
+
+  replyMessage!=null?{
+  replyData = ReplyOf(
+  id: replyMessage!.id,
+  from: replyMessage!.from,
+  to: replyMessage!.to,
+  senderName: replyMessage!.from!.name,
+  text: replyMessage!.text, imageUrl: replyMessage!.imageUrl)
+  }: {};
+
+
   Message message = Message(
       id: "",
       from: currentUser,
@@ -1035,10 +1291,15 @@ sendMessage(
       seenBy: seenBy,
       receivedBy: receivedBy,
       imageUrl: imageUrl,
-      reacts: reacts);
+      reacts: reacts,
+      replyOf: replyData);
 
-  convsController.sendMessage(convsController.conversations[convsIndex].id!,
+  await convsController.sendMessage(convsController.conversations[convsIndex].id!,
       convsController.conversations[convsIndex].type!, message, convsIndex);
+
+
+  replyMessage = null;
+  refreshRepliedMessage();
 }
 
 class ChatMessageTypingField extends StatefulWidget {
@@ -1048,8 +1309,12 @@ class ChatMessageTypingField extends StatefulWidget {
   int convsIndex;
   List<String> typingUsersId;
 
+  Function() refreshRepliedMessage;
+
+
+
   ChatMessageTypingField(this.convsController, this.currentUser,
-      this.selectedUser, this.socket, this.convsIndex, this.typingUsersId,
+      this.selectedUser, this.socket, this.convsIndex, this.typingUsersId, this.refreshRepliedMessage,
       {Key? key})
       : super(key: key);
 
@@ -1058,14 +1323,17 @@ class ChatMessageTypingField extends StatefulWidget {
 }
 
 class _ChatMessageTypingFieldState extends State<ChatMessageTypingField> {
+
   TextEditingController messageController = new TextEditingController();
   bool emojiShowing = false;
+
 
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       child: Column(
         children: [
+
           Container(
             margin: EdgeInsets.all(15.0),
             height: 61,
@@ -1173,7 +1441,7 @@ class _ChatMessageTypingFieldState extends State<ChatMessageTypingField> {
                                 messageController,
                                 "",
                                 widget.socket,
-                                widget.convsIndex);
+                                widget.convsIndex, widget.refreshRepliedMessage);
                           },
                         ),
                         IconButton(
@@ -1204,8 +1472,9 @@ class _ChatMessageTypingFieldState extends State<ChatMessageTypingField> {
                             messageController.text,
                             "",
                             widget.socket,
-                            widget.convsIndex);
+                            widget.convsIndex, widget.refreshRepliedMessage, context);
                         messageController.text = "";
+
 
                         if (widget.typingUsersId
                             .contains(widget.currentUser.id)) {
@@ -1289,7 +1558,7 @@ class _ChatMessageTypingFieldState extends State<ChatMessageTypingField> {
       TextEditingController messageController,
       imageUrl,
       IO.Socket socket,
-      int convsIndex) async {
+      int convsIndex, Function() refreshRepliedMessage) async {
     file = await ImagePicker()
         .pickImage(source: ImageSource.gallery); //pick an image
     //upload file...
@@ -1305,10 +1574,10 @@ class _ChatMessageTypingFieldState extends State<ChatMessageTypingField> {
           "https://nodejsrealtimechat.onrender.com/upload",
           data: {"image": base64Image, "name": filename});
       await sendMessage(convsController, currentUser, selectedUserId,
-          messageController.text, response.data['url'], socket, convsIndex);
+          messageController.text, response.data['url'], socket, convsIndex, refreshRepliedMessage, context);
     } catch (e) {
       print(e.toString());
-    }
+    } 
   }
 }
 

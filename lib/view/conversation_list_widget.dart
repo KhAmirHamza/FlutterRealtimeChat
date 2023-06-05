@@ -496,8 +496,6 @@ class _ConversationItemWidgetState extends State<ConversationItemWidget> {
           onTap: () {
              print("widget.conversation.id:"+widget.convsController.conversations[widget.index].id.toString());
 
-
-
              Navigator.of(context).pushAndRemoveUntil(
                  MaterialPageRoute(
                      builder: (context) => CreateGroupWidget(
@@ -750,7 +748,8 @@ class _ConversationItemWidgetState extends State<ConversationItemWidget> {
                             receivedBy: receivedBy,
                             imageUrl:
                             "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTKTSNwcT2YrRQJKGVQHClGtQgp1_x8kLd0Ig&usqp=CAU",
-                        reacts: reacts));
+                        reacts: reacts,
+                        replyOf: null));
 
                         selectedUsers.add(currentUser);
                         createGroupConversation(

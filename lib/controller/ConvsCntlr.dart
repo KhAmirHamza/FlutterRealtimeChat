@@ -221,6 +221,7 @@ class ConversationController extends GetxController implements SocketListeners{
 
 
 
+
   @override
   void onMessageReceived(IO.Socket socket, data) {
     // TODO: implement onMessageReceived
@@ -321,6 +322,7 @@ class ConversationController extends GetxController implements SocketListeners{
           receivedBy: receivedBy,
           imageUrl: jsonMap['imageUrl'],
           reacts: reacts,
+          replyOf: jsonMap['replyOf']!=null?ReplyOf.fromJson(jsonMap['replyOf']):null,
           createdAt: jsonMap['createdAt'],
           updatedAt: jsonMap['updatedAt']
       );
@@ -361,7 +363,6 @@ class ConversationController extends GetxController implements SocketListeners{
     if (!conversations[convsIndex]
         .messages![messageIndex]
         .reacts!.contains(react)) {
-
       conversations[convsIndex]
           .messages![messageIndex]
           .reacts!

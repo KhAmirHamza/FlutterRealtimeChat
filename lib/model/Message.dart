@@ -9,10 +9,11 @@ class Message {
   List<String>? receivedBy;
   String? imageUrl;
   List<React>? reacts;
+  ReplyOf? replyOf;
   String? createdAt;
   String? updatedAt;
 
-  Message({this.id, this.from, this.to, this.text, this.seenBy, this.receivedBy, this.imageUrl, this.reacts, this.createdAt, this.updatedAt});
+  Message({this.id, this.from, this.to, this.text, this.seenBy, this.receivedBy, this.imageUrl, this.reacts, this.replyOf, this.createdAt, this.updatedAt});
 
   Message.fromJson(Map<String, dynamic> json) {
     id = json['_id'];
@@ -28,6 +29,7 @@ class Message {
         reacts!.add(new React.fromJson(v));
       });
     }
+    replyOf = json['replyOf'] != null ? new ReplyOf.fromJson(json['replyOf']) : null;
     createdAt = json['createdAt'];
     updatedAt = json['updatedAt'];
   }
@@ -45,6 +47,9 @@ class Message {
     data['imageUrl'] = this.imageUrl;
     if (this.reacts != null) {
       data['reacts'] = this.reacts!.map((v) => v.toJson()).toList();
+    }
+    if (this.replyOf != null) {
+      data['replyOf'] = this.replyOf!.toJson();
     }
     data['createdAt'] = this.createdAt;
     data['updatedAt'] = this.updatedAt;
@@ -73,7 +78,39 @@ class React {
   }
 }
 
+class ReplyOf {
+  String? id;
+  User? from;
+  String? to;
+  String? senderName;
+  String? text;
+  String? imageUrl;
+  ReplyOf({this.id, this.from, this.to, this.senderName, this.text, this.imageUrl});
 
+  ReplyOf.fromJson(Map<String, dynamic> json) {
+    id = json['_id'];
+    from = json['from'] != null ? new User.fromJson(json['from']) : null;
+    to = json['to'];
+    senderName = json['senderName'];
+    text = json['text'];
+    imageUrl = json['imageUrl'];
+  }
+
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> data = new Map<String, dynamic>();
+    data['_id'] = this.id;
+    if (this.from != null) {
+      data['from'] = this.from!.toJson();
+    }
+    data['to'] = this.to;
+    data['senderName'] = this.senderName;
+    data['text'] = this.text;
+    data['imageUrl'] = this.imageUrl;
+    return data;
+  }
+
+
+}
 
 
 //

@@ -347,6 +347,7 @@ sendMessage(
     int convsIndex) {
 
   List<String> seenBy = <String>[];
+  List<String> receivedBy = <String>[];
   seenBy.add(currentUser.id.toString());
   List<React> reacts = <React>[];
   Message message = Message(
@@ -356,7 +357,9 @@ sendMessage(
     text: messageText,
     seenBy: seenBy,
     imageUrl: imageUrl,
-    reacts: reacts
+    reacts: reacts,
+    receivedBy: receivedBy,
+    replyOf: null
   );
 
   convsController.sendMessage(
