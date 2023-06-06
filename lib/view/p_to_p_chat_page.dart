@@ -575,7 +575,6 @@ class _ChatBubbleState extends State<ChatBubble> {
                           width: 40,
                           child: FloatingActionButton(
                               heroTag: 'btn1',
-                              tooltip: 'Secret Chat',
                               backgroundColor: Colors.transparent,
                               foregroundColor: Colors.white,
                               splashColor: Colors.blue,
@@ -627,7 +626,6 @@ class _ChatBubbleState extends State<ChatBubble> {
                           width: 40,
                           child: FloatingActionButton(
                               heroTag: 'btn1',
-                              tooltip: 'Secret Chat',
                               backgroundColor: Colors.transparent,
                               foregroundColor: Colors.white,
                               splashColor: Colors.blueAccent,
@@ -1090,7 +1088,7 @@ class _ChatBubbleState extends State<ChatBubble> {
                     ),
                     Positioned(
                         bottom: 0,
-                        right: 5,
+                        right: 0,
                         child: Row(
                           children: [
                             Visibility(
@@ -1651,12 +1649,11 @@ void showMessageForwardDialog (
                                         onPressed: () async {
 
                                         await Future.delayed(Duration(seconds: 1));
- 
-                                        print("Message forward Called!");
 
-                                        Message messageToBeForward = new Message(from: currentUser,to: controller.users[index].id!,text: message.text,
+                                        Message messageToBeForward = Message(from: currentUser,to: controller.users[index].id!,text: message.text,
                                             seenBy: [currentUser.id!], receivedBy: [currentUser.id!], imageUrl: message.imageUrl, reacts: []);
 
+                                        // ignore: use_build_context_synchronously
                                         forwardMessage(context, socket, userController, convsController, currentUser, controller.users[index],
                                             "${currentUser.name!}-${controller.users[index].name!}", "Single", messageToBeForward,
                                             convsController.conversations[convsIndex].id!,  convsController.conversations[convsIndex].type!);
@@ -1666,14 +1663,13 @@ void showMessageForwardDialog (
                                       },
                                       builder: (context, child, callback, _) {
                                         return TextButton(
-                                          child: child,
                                           onPressed: callback,
+                                          child: child,
                                         );
                                       },
                                     ),
                                   ),
                                 ),
-
                               ],
                             ),
                           ),
@@ -1691,9 +1687,9 @@ void showMessageForwardDialog (
     transitionBuilder: (_, anim, __, child) {
       Tween<Offset> tween;
       if (anim.status == AnimationStatus.reverse) {
-        tween = Tween(begin: Offset(-1, 0), end: Offset.zero);
+        tween = Tween(begin: const Offset(-1, 0), end: Offset.zero);
       } else {
-        tween = Tween(begin: Offset(1, 0), end: Offset.zero);
+        tween = Tween(begin: const Offset(1, 0), end: Offset.zero);
       }
 
       return SlideTransition(
@@ -1705,8 +1701,6 @@ void showMessageForwardDialog (
       );
     },
   );
-
-
 }
 
 void forwardMessage(
@@ -1719,6 +1713,6 @@ void forwardMessage(
     String type,
     Message message,
     String convsId, String convsType) {
-  convsController.sendFirstMessage(context, socket, userController, convsController, currentUser, selectedUser, title, type, message, convsId, convsType);
+  convsController.sendFirstMessage(context, socket, userController, convsController, currentUser, selectedUser, null,  title, message, convsType);
 }
 

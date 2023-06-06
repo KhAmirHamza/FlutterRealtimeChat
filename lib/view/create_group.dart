@@ -8,8 +8,9 @@ import 'package:socket_io_client/socket_io_client.dart' as IO;
 import '../controller/ConvsCntlr.dart';
 import '../model/Message.dart';
 import '../model/User.dart';
+import 'home_page.dart';
 
-List<User> selectedUsers = <User>[];
+List<User> groupUsers = <User>[];
 
 class CreateGroupWidget extends StatefulWidget {
   UserController userController;
@@ -32,7 +33,7 @@ class _CreateGroupWidgetState extends State<CreateGroupWidget> {
 
   refresh(List<User> users) {
     setState(() {
-      selectedUsers = users;
+      groupUsers = users;
     });
   }
 
@@ -87,7 +88,6 @@ class GroupWidget extends StatefulWidget {
 
   ConversationController convsController;
   User currentUser;
-  List<Message> messages = <Message>[];
 
   //List<User> users = <User>[];
   IO.Socket socket;
@@ -109,7 +109,7 @@ class _GroupWidgetState extends State<GroupWidget>
 
     refresh(List<User> users) {
       setState(() {
-        selectedUsers = users;
+        groupUsers = users;
       });
     }
 
@@ -264,7 +264,7 @@ class _GroupWidgetState extends State<GroupWidget>
                         borderRadius: BorderRadius.circular(15),
                       ),
                       //margin: EdgeInsets.fromLTRB(5,5,5,5),
-                      height: selectedUsers.isEmpty ? 0 : 80,
+                      height: groupUsers.isEmpty ? 0 : 80,
                       curve: Curves.fastOutSlowIn,
                       padding: EdgeInsets.fromLTRB(5, 0, 5, 5),
                       child: Column(
@@ -277,7 +277,7 @@ class _GroupWidgetState extends State<GroupWidget>
                               alignment: Alignment.topLeft,
                               margin: EdgeInsets.fromLTRB(5, 5, 5, 0),
                               child: Text(
-                                "Selected Contact: ( ${selectedUsers.length} )",
+                                "Selected Contact: ( ${groupUsers.length} )",
                                 style: TextStyle(fontSize: 14, color: Colors.grey),
                               ),
                             ),
@@ -286,7 +286,7 @@ class _GroupWidgetState extends State<GroupWidget>
                             flex: 5,
                             child: ListView.builder(
                               //physics: const NeverScrollableScrollPhysics(),
-                              itemCount: selectedUsers.length,
+                              itemCount: groupUsers.length,
                               scrollDirection: Axis.horizontal,
                               itemBuilder: (context, index) {
                                 // return EmployeeItem(selecteUsers, index);
@@ -323,7 +323,6 @@ class _GroupWidgetState extends State<GroupWidget>
                               widget.convsController,
                               widget.userController,
                               widget.currentUser,
-                              widget.messages,
                               widget.socket);
                         },
                         child: Text("Next", style: TextStyle(color: Colors.white)),
@@ -379,7 +378,7 @@ class SelectedUserWidget extends StatelessWidget {
               ),
               Expanded(
                 child: Text(
-                  selectedUsers[index].name.toString(),
+                  groupUsers[index].name.toString(),
                   style: TextStyle(fontSize: 12),
                 ),
               )
@@ -417,14 +416,14 @@ class _EmployeeItemState extends State<EmployeeItem> {
 
               //select or remove contact
 
-              if (selectedUsers
+              if (groupUsers
                   .contains(widget.userController.users[widget.index])) {
-                selectedUsers.remove(widget.userController.users[widget.index]);
+                groupUsers.remove(widget.userController.users[widget.index]);
               } else {
-                selectedUsers.add(widget.userController.users[widget.index]);
+                groupUsers.add(widget.userController.users[widget.index]);
               }
               //userController.users.refresh();
-              widget.refresh(selectedUsers);
+              widget.refresh(groupUsers);
               setState(() {});
             },
             child: Row(
@@ -440,7 +439,7 @@ class _EmployeeItemState extends State<EmployeeItem> {
                     child: CircleAvatar(
                       radius: 10,
                       backgroundColor: Colors.white,
-                      backgroundImage: selectedUsers.contains(
+                      backgroundImage: groupUsers.contains(
                               widget.userController.users[widget.index])
                           ? AssetImage('assets/selected.png')
                           : null,
@@ -466,9 +465,8 @@ void showCustomDialog(
     ConversationController convsController,
     UserController userController,
     User currentUser,
-    List<Message> messages,
     IO.Socket socket) {
-  print("Next Clicked: " + selectedUsers.length.toString());
+  print("Next Clicked: " + groupUsers.length.toString());
 
   TextEditingController groupNameController = TextEditingController();
 
@@ -531,7 +529,7 @@ void showCustomDialog(
               Expanded(
                 flex: 1,
                   child: ListView.builder(
-                      itemCount: selectedUsers.length,
+                      itemCount: groupUsers.length,
                       scrollDirection: Axis.horizontal,
                       itemBuilder: (context, index) {
                         // return EmployeeItem(selecteUsers, index);
@@ -552,7 +550,7 @@ void showCustomDialog(
                                   backgroundColor: Colors.transparent,
                                 ),
                                 Text(
-                                  selectedUsers[index].name.toString(),
+                                  groupUsers[index].name.toString(),
                                   style: TextStyle(fontSize: 10),
                                 )
                               ],
@@ -579,32 +577,31 @@ void showCustomDialog(
                       List<String> receivedBy = <String>[];
                       receivedBy.add(currentUser.id.toString());
                       List<React> reacts = <React>[];
-                      messages.add(Message(
+
+                      Message message = Message(
                           id: "Initial",
                           from: currentUser,
-                          to: "Initial",
+                          to: "All",
                           text: "Initial",
                           seenBy: seenBy,
                           receivedBy: receivedBy,
                           imageUrl:
-                              "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTKTSNwcT2YrRQJKGVQHClGtQgp1_x8kLd0Ig&usqp=CAU",
-                      reacts: reacts,
-                      replyOf: null));
+                          "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTKTSNwcT2YrRQJKGVQHClGtQgp1_x8kLd0Ig&usqp=CAU",
+                          reacts: reacts,
+                          replyOf: null );
+                      groupUsers.add(currentUser);
 
-                      selectedUsers.add(currentUser);
-                      createGroupConversation(
-                          context,
-                          convsController,
-                          groupNameController.text,
-                          selectedUsers,
-                          userController,
-                          currentUser,
-                          messages,
-                          socket);
+                      convsController.sendFirstMessage(context, socket, userController, convsController, currentUser, null, groupUsers,  groupNameController.text, message, "Group");
+
                       Navigator.of(_, rootNavigator: true).pop();
+                      Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) =>
+                                  HomePage(userController, currentUser, socket, convsController)
+                          ));
                     },
-                    child:
-                        Text("Submit", style: TextStyle(color: Colors.white)),
+                    child: Text("Submit", style: TextStyle(color: Colors.white)),
                   ),
                 ),
               )

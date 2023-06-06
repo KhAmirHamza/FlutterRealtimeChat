@@ -72,6 +72,7 @@ class _UserListPageState extends State<UserListPage> {
                       child: Text("Create new group", style: TextStyle(fontSize: 14, color: Colors.black, fontWeight: FontWeight.bold),)),
 
                 ],),
+
               ),),
 
               Container(alignment: Alignment.centerLeft, margin: EdgeInsets.fromLTRB(5, 25, 0, 10),
@@ -106,7 +107,6 @@ class UserWidget extends StatefulWidget {
   UserController userController;
   ConversationController convsController;
   User currentUser, selectedUser;
-  List<Message> messages = <Message>[];
 
   List<User> users = <User>[];
   IO.Socket socket;
@@ -131,36 +131,34 @@ class _UserWidgetState extends State<UserWidget> {
 
     List<React> reacts = <React>[];
 
-    widget.messages.add(Message(
+    Message message = Message(
         id: "Initial",
         from: widget.currentUser,
         to: "All",
         text: "Initial",
         seenBy: seenBy,
         receivedBy: receivedBy,
-        imageUrl:
-            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTKTSNwcT2YrRQJKGVQHClGtQgp1_x8kLd0Ig&usqp=CAU",
+        imageUrl: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTKTSNwcT2YrRQJKGVQHClGtQgp1_x8kLd0Ig&usqp=CAU",
       reacts: reacts,
-      replyOf: null
-    ),
-    );
+      replyOf: null);
 
     widget.users.add(widget.currentUser);
     widget.users.add(widget.selectedUser);
 
     return Card(
       child: InkWell(
-        onTap: () => {
+        onTap: (){
+          widget.convsController.sendFirstMessage(  context, widget.socket, widget.userController, widget.convsController, widget.currentUser,
+              widget.selectedUser, null,  title, message, "Single", );
+          Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) =>
+                      HomePage(widget.userController, widget.currentUser, widget.socket, widget.convsController)
+              ));
 
-          createSingleConversation(
-              widget.convsController,
-              title,
-              widget.users,
-              widget.userController,
-              widget.currentUser,
-              widget.selectedUser,
-              widget.messages,
-              widget.socket)
+
+
         },
         child: Container(
           margin: EdgeInsets.fromLTRB(5, 5, 5, 5),
@@ -194,16 +192,4 @@ class _UserWidgetState extends State<UserWidget> {
     );
   }
 
-  createSingleConversation(
-      ConversationController convsController,
-      String title,
-      List<User> users,
-      UserController userController,
-      User currentUser,
-      User selectedUser,
-      List<Message> messages,
-      IO.Socket socket) {
-    convsController.createSingleConversation(context, socket, userController,
-        convsController, currentUser, selectedUser, "", title, "Single", users, messages);
-  }
 }

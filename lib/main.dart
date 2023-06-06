@@ -50,6 +50,7 @@ class _MyAppState extends State<MyApp> {
 
     return MaterialApp(
         title: 'Flutter Realtime Chat',
+        debugShowCheckedModeBanner: false,
         theme: ThemeData(
           primarySwatch: Colors.blue,
         ),

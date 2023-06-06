@@ -82,17 +82,17 @@ class ConversationController extends GetxController implements SocketListeners{
       IO.Socket socket,
       UserController userController,
       ConversationController convsController,
-      User currentUser, User selectedUser,
-      String title,
-      String type,
-      Message message, String convsId, String convsType) async {
+      User currentUser, User? selectedUser, List<User>? groupUsers,
+      String title, Message message, String convsType) async {
 
     var header = {
       'Content-type': 'application/json; charset=utf-8',
       'Accept': 'application/json'
     };
 
-    List<User> users = [currentUser, selectedUser];
+    List<User> users = <User>[];
+    users.add(currentUser);
+    selectedUser!=null? users.add(selectedUser): {};
 
     var response = await dio.post(
       //'https://nodejsrealtimechat.onrender.com/conversation/firstMessage',
@@ -100,13 +100,14 @@ class ConversationController extends GetxController implements SocketListeners{
       // 'http://172.28.240.1:3000/conversation/add',
       data: jsonEncode(<String, dynamic>{
         "title": title,
-        "type": type,
-        "users": users,
+        "type": convsType,
+        "users": convsType=="Single"? users:groupUsers,
         "message": message,
       }),
       options: Options(headers: header),
     );
-    Message messageData = Message.fromJson(response.data);
+    Conversation conversation = Conversation.fromJson(response.data);
+    Message messageData = conversation.messages![conversation.messages!.length-1];
 
     if (response.statusCode == 200) {
 
@@ -122,7 +123,7 @@ class ConversationController extends GetxController implements SocketListeners{
         "_id": messageData.id,
         "from": messageData.from,
         "to": messageData.to,
-        "convsId": convsId,
+        "convsId": conversation.id,
         "convsType": convsType,
         "text": messageData.text,
         "seenBy": messageData.seenBy,
@@ -216,21 +217,22 @@ class ConversationController extends GetxController implements SocketListeners{
       }
   }
 
-
   receivedMessage(String convsId, String convsType, String messageId, IO.Socket socket, String currentUserId) async {
+
     var header = {
       'Content-type': 'application/json; charset=utf-8',
       'Accept': 'application/json'
     };
 
     var response = await dio.post(
-        chatUrl+"/conversation/receivedMessage?convsId=" + convsId,
+        "$chatUrl/conversation/receivedMessage?convsId=$convsId",
       data: jsonEncode(<String, dynamic>{
         'messageId': messageId,
         "currentUserId": currentUserId,
       }),
       options: Options(headers: header),
     );
+
     if (response.statusCode == 200) {
       socketController.notifyMessageReceived(convsId, convsType, currentUserId);
 
@@ -353,12 +355,16 @@ class ConversationController extends GetxController implements SocketListeners{
   @override
   void onMessageSend(IO.Socket socket, data, User currentUser) {
     // TODO: implement onMessageSend
-
     var jsonMap = data as Map<String, dynamic>;
+
+
+    if( (conversations.length==0 || !conversations.any((item) => item.id == jsonMap['convsId']))){
+      getConversationByUserId(currentUser.id!);
+    }
+
     User user = User.fromJson(jsonMap['from']);
 
     if (user.id!=  currentUser.id!) {
-
 
       var receivedByList = jsonMap['receivedBy'].toList();
       List<String> receivedBy = <String>[];

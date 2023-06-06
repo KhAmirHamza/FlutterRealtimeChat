@@ -15,10 +15,7 @@ import 'create_group.dart';
 import 'group_chat_widget.dart';
 import 'p_to_p_chat_page.dart';
 
-
 var selectedUsers = <User>[];
-
-
 
 class ConversationListWidget extends StatefulWidget {
 
@@ -26,7 +23,6 @@ class ConversationListWidget extends StatefulWidget {
   UserController userController;
   IO.Socket socket;
   ConversationController convsController;
-
   ConversationListWidget(this.userController, this.currentUser, this.socket, this.convsController, {Key? key}) : super(key: key);
 
   @override
@@ -41,7 +37,6 @@ class _ConversationListWidgetState extends State<ConversationListWidget> {
   void initState() {
     super.initState();
     myFocusNode = FocusNode();
-
   }
 
   @override
@@ -256,34 +251,6 @@ class _ConversationListWidgetState extends State<ConversationListWidget> {
                   );
                 },
               )),
-              // Container(
-              //   margin: EdgeInsets.fromLTRB(0, 0, 10, 15),
-              //   child: Align(
-              //       alignment: Alignment.bottomRight,
-              //       child: FloatingActionButton.extended(
-              //         onPressed: () {
-              //           // Add your onPressed code here!
-              //           print("Add Conversation Clicked");
-              //
-              //           //pushAndRemoveUntil
-              //
-              //
-              //
-              //           // Navigator.push(
-              //           //   context,
-              //           //   MaterialPageRoute(
-              //           //       builder: (context) => UserListPage(
-              //           //           userController,
-              //           //           convsController,
-              //           //           currentUser,
-              //           //           socket)),
-              //           // );
-              //         },
-              //         label: const Text('Add'),
-              //         icon: const Icon(Icons.message),
-              //         backgroundColor: Color.fromARGB(255, 19, 149, 88),
-              //       )),
-              // )
             ],
           )),
 
@@ -295,11 +262,28 @@ class _ConversationListWidgetState extends State<ConversationListWidget> {
     widget.socket.on(notifyMessageSendEvent, (data) {
       widget.convsController.onMessageSend(widget.socket, data, widget.currentUser);
     });
+
+    setUpReactionRealTimeListeners("Single");
 }
+  void setUpReactionRealTimeListeners(String convsType) {
+    String notifyNewReactAddedEvent = "notifyNewReactAdded?convsType=$convsType";
+    widget.socket.on(notifyNewReactAddedEvent, (data) {
+      widget.convsController.onNewReactAdded(widget.socket, data);
+    });
+  }
+
 
   void setUpGroupMessagingRealTimeListeners() {
 
+    String notifyMessageSendEvent = "notifyMessageSend?convsType=Group";
+    widget.socket.on(notifyMessageSendEvent, (data) {
+      widget.convsController.onMessageSend(widget.socket, data, widget.currentUser);
+    });
 
+   setUpReactionRealTimeListeners("Group");
+
+
+/*
     //String receiveMessageEvent = "receiveMessage?convsId=${convs.id}&convsType=Single";
     String receiveMessageEvent = "receiveMessage?convsType=Group";
 
@@ -331,7 +315,7 @@ class _ConversationListWidgetState extends State<ConversationListWidget> {
 
         List<String> receivedBy = <String>[];
         for (var i = 0; i < seenByList.length; i++) {
-          //Convert And Reasign Existing SeenBy Data...
+          //Convert And Reassign Existing SeenBy Data...
           receivedBy.add(receivedByList[i]);
         }
 
@@ -415,7 +399,7 @@ class _ConversationListWidgetState extends State<ConversationListWidget> {
         widget.convsController.conversations.refresh();
 
       }
-    });
+    });*/
   }
 }
 
@@ -489,7 +473,8 @@ class _ConversationItemWidgetState extends State<ConversationItemWidget> {
 
                     builder: (context) => widget.conversation.type == "Group"
                         ? GroupChatWidget(widget.convsController,
-                        widget.currentUser, widget.socket, widget.index, widget.userController)
+                        widget.currentUser, widget.socket, widget.index, widget.userController
+                    )
                         : pToP_ChatPage(
                         widget.convsController,
                         widget.currentUser,
