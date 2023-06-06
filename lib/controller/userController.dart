@@ -9,6 +9,7 @@ import 'package:realtime_chat/model/User.dart';
 import 'package:realtime_chat/view/home_page.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 
+import '../utils/Constant.dart';
 import '../view/create_group.dart';
 import '../view/user_list_page.dart';
 
@@ -31,7 +32,8 @@ class UserController extends GetxController {
     };
     var response = await dio.post(
      // 'http://172.28.240.1:3000/user/add',
-      'https://nodejsrealtimechat.onrender.com/user/add',
+      chatUrl+'/user/add',
+      //'https://nodejsrealtimechat.onrender.com/user/add',
       data: jsonEncode(<String, String>{
         "chatId": chatId,
         "name": name,
@@ -68,7 +70,8 @@ class UserController extends GetxController {
     };
     var responce = await dio.get(
 //'http://172.28.240.1:3000/user/get',
-      'https://nodejsrealtimechat.onrender.com/user/get',
+      chatUrl+'/user/get',
+      //'https://nodejsrealtimechat.onrender.com/user/get',
       options: Options(headers: header),
     );
     if (responce.statusCode == 200) {
@@ -88,7 +91,7 @@ class UserController extends GetxController {
       'Accept': 'application/json'
     };
     var response = await dio.get(
-      'https://nodejsrealtimechat.onrender.com/user/get',
+      chatUrl+'/user/get',
    //   'http://172.28.240.1:3000/user/get',
       options: Options(headers: header),
     );
@@ -126,7 +129,7 @@ class UserController extends GetxController {
       'Accept': 'application/json'
     };
     var response = await dio.get(//verify User
-      "https://nodejsrealtimechat.onrender.com/user/get?email=${userEmail}&password=${userPassword}",
+      chatUrl+"/user/get?email=${userEmail}&password=${userPassword}",
  //     "http://172.28.240.1:3000/user/get?email=${userEmail}&password=${userPassword}",
       options: Options(headers: header),
     );
@@ -176,7 +179,7 @@ class UserController extends GetxController {
     };
     var response = await dio.post(
      //'http://172.28.240.1:3000/user/updateChatId',
-     'https://nodejsrealtimechat.onrender.com/user/updateChatId',
+      chatUrl+'/user/updateChatId',
       data: jsonEncode(<String, String>{
         '_id': id,
         'chatId': chatId,

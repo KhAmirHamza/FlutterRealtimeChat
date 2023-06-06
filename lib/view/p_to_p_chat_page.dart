@@ -1,8 +1,10 @@
-//import 'dart:io';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
+import 'package:any_animated_button/any_animated_button.dart';
+import 'package:async_button_builder/async_button_builder.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_emoji/flutter_emoji.dart';
 import 'package:mime/mime.dart';
 import 'package:dio/dio.dart';
@@ -11,6 +13,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:realtime_chat/controller/ConvsCntlr.dart';
+import 'package:realtime_chat/controller/SocketController.dart';
 import 'package:realtime_chat/controller/userController.dart';
 import 'package:realtime_chat/model/Message.dart';
 import 'package:realtime_chat/model/User.dart';
@@ -18,24 +21,25 @@ import 'package:get/get_connect/http/src/multipart/form_data.dart';
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:flutter/foundation.dart' as foundation;
 import 'package:realtime_chat/view/conversation_list_widget.dart';
+import 'package:realtime_chat/view/home_page.dart';
 import 'package:realtime_chat/view/typing_indicator.dart';
+import 'package:realtime_chat/view/user_list_page.dart';
 
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:http_parser/http_parser.dart';
 import 'package:get/get.dart' hide Response, FormData, MultipartFile;
 import 'package:lottie/lottie.dart';
 import 'package:dio/src/multipart_file.dart' as MultipartFile;
-
 import 'package:http/http.dart' as http;
-
 import '../model/Conversation.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
+import 'package:any_animated_button/any_animated_button.dart';
+import 'package:equatable/equatable.dart';
 
-bool isChatting = true;
+bool isChatting = false;
 Message? replyMessage;
 
-class pToP_ChatPage extends StatefulWidget implements OnMessageSend {
-  // Completely Done for now
+class pToP_ChatPage extends StatefulWidget {
   ConversationController convsController;
   User currentUser, selectedUser;
   int convsIndex;
@@ -50,30 +54,8 @@ class pToP_ChatPage extends StatefulWidget implements OnMessageSend {
   @override
   State<pToP_ChatPage> createState() => _pToP_ChatPageState();
 
-  @override
-  void onMessageSend() {
-    // TODO: implement onMessageSend
-    print("OnMessageSendCalled");
-
-    String notifyMessageSendEvent = "notifyMessageSend?convsType=Single";
-    socket.on(notifyMessageSendEvent, (data) {
-      Message message = convsController.conversations[convsIndex].messages![
-          convsController.conversations[convsIndex].messages!.length - 1];
-
-      //if (!(message.seenBy!.contains(currentUser.id!))) {
-      // message.receivedBy!.add(widget.currentUser.id!)
-      //  conversations[ convsIndex].messages!.add( message );
-
-      Conversation conversation = convsController.conversations[convsIndex];
-
-      if (isChatting) {
-        convsController.seenMessage(conversation.id!, conversation.type!,
-            message.id!, socket, currentUser.id!);
-
-        convsController.conversations.refresh();
-      }
-      //  }
-    });
+  static void seenMessage(ConversationController convsController, String convsId,  String convsType,  String messageId,  IO.Socket socket,  String currentUserId, ) {
+    if(isChatting) convsController.seenMessage(convsId, convsType, messageId, socket, currentUserId);
   }
 }
 
@@ -83,8 +65,7 @@ class _pToP_ChatPageState extends State<pToP_ChatPage> {
   @override
   void initState() {
     // TODO: implement initState
-    super.initState();
-    isChatting = true;
+    super.initState();   isChatting = true;
   }
 
   @override
@@ -136,7 +117,6 @@ class _pToP_ChatPageState extends State<pToP_ChatPage> {
             widget.socket,
             widget.currentUser.id!);
 
-        //widget.convsController.conversations.refresh();
       }
 
       if (!message.seenBy!.contains(widget.currentUser.id)) {
@@ -159,8 +139,7 @@ class _pToP_ChatPageState extends State<pToP_ChatPage> {
         widget.convsController.conversations.refresh();
       }
 
-      String typingEvent =
-          "typing?convsId=${widget.convsController.conversations[widget.convsIndex].id}"; //typing event name...
+      String typingEvent = "typing?convsId=${widget.convsController.conversations[widget.convsIndex].id}"; //typing event name...
       widget.socket.on(typingEvent, (data) {
         var jsonMap = data as Map<String, dynamic>;
         var result = jsonMap['typingUsersId'].toList();
@@ -169,45 +148,33 @@ class _pToP_ChatPageState extends State<pToP_ChatPage> {
         for (int i = 0; i < result.length; i++) {
           ids.add(result[i]);
         }
-
-        //typingUsersId.clear();
-
-        // if(ids.isNotEmpty && ids[ids.length-1]!=widget.currentUser.id){
         typingUsersId = ids;
         setState(() {
-          //  print("Typing: users: "+result.length.toString());
         });
-        //  }
       });
 
-      String notifyMessageReceivedEvent =
-          "notifyMessageReceived?convsType=Single";
+      String notifyMessageReceivedEvent = "notifyMessageReceived?convsType=Single";
       widget.socket.on(notifyMessageReceivedEvent, (data) {
         widget.convsController.onMessageReceived(widget.socket, data);
       });
 
       String notifyMessageSeenEvent = "notifyMessageSeen?convsType=Single";
       widget.socket.on(notifyMessageSeenEvent, (data) {
-        //
-        // var jsonMap = data as Map<String, dynamic>;
-        // String newUserId = jsonMap['newUserId'];
-
-        print("isChatting: " + isChatting.toString());
-        if (isChatting) {
           widget.convsController.onMessageSeen(widget.socket, data);
-        } else {}
         ;
       });
     });
 
     return WillPopScope(
       onWillPop: () async {
+        isChatting = false;
         widget.socket.clearListeners();
 
         Navigator.push(
             context,
             MaterialPageRoute(
-                builder: (context) => ConversationListWidget(
+                builder: (context) =>
+                HomePage(
                     widget.userController,
                     widget.currentUser,
                     widget.socket,
@@ -223,16 +190,17 @@ class _pToP_ChatPageState extends State<pToP_ChatPage> {
             color: Colors.black,
             onPressed: () {
               //Navigator.of(context, rootNavigator: true).pop();
-            widget.socket.clearListeners();
+              isChatting = false;
+              widget.socket.clearListeners();
 
               Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (context) => ConversationListWidget(
-                      widget.userController,
-                      widget.currentUser,
-                      widget.socket,
-                      widget.convsController)));
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => HomePage(
+                          widget.userController,
+                          widget.currentUser,
+                          widget.socket,
+                          widget.convsController)));
             },
           ),
           backgroundColor: Colors.white,
@@ -284,7 +252,7 @@ class _pToP_ChatPageState extends State<pToP_ChatPage> {
             widget.selectedUser,
             widget.socket,
             widget.convsIndex,
-            typingUsersId),
+            typingUsersId, widget.userController),
       ),
     );
   }
@@ -295,25 +263,23 @@ class MessageListWidget extends StatefulWidget {
   User currentUser, selectedUser;
   IO.Socket socket;
   int convsIndex;
+  UserController userController;
 
   List<String> typingUsersId;
 
   final dio = Dio();
 
   MessageListWidget(this.convsController, this.currentUser, this.selectedUser,
-      this.socket, this.convsIndex, this.typingUsersId,
+      this.socket, this.convsIndex, this.typingUsersId, this.userController,
       {super.key});
 
   @override
   State<MessageListWidget> createState() => _MessageListWidgetState();
 }
 
-
 class _MessageListWidgetState extends State<MessageListWidget> {
-
-  refreshRepliedMessage(){
-    setState(() {
-    });
+  refreshRepliedMessage() {
+    setState(() {});
   }
 
   @override
@@ -383,15 +349,19 @@ class _MessageListWidgetState extends State<MessageListWidget> {
                       visible: !hasMessagesAtSameDay,
                     ),
                     ChatBubble(
-                        messageIndex: reversedIndex,
-                        convsIndex: widget.convsIndex,
-                        isCurrentUser: item.from!.id == widget.currentUser.id,
-                        hasSeen: hasSeen,
-                        hasReceived: hasReceived,
-                        isLastSendMessage: isLastSendMessage,
-                        convsController: widget.convsController,
-                        socket: widget.socket,
-                        currentUser: widget.currentUser, refreshRepliedMessage:refreshRepliedMessage,),
+                      messageIndex: reversedIndex,
+                      convsIndex: widget.convsIndex,
+                      isCurrentUser: item.from!.id == widget.currentUser.id,
+                      hasSeen: hasSeen,
+                      hasReceived: hasReceived,
+                      isLastSendMessage: isLastSendMessage,
+                      convsController: widget.convsController,
+                      socket: widget.socket,
+                      currentUser: widget.currentUser,
+                      refreshRepliedMessage: refreshRepliedMessage,
+                      userController: widget.userController,
+                      selectedUser: widget.selectedUser,
+                    ),
                   ],
                 );
               },
@@ -404,80 +374,84 @@ class _MessageListWidgetState extends State<MessageListWidget> {
           flashingCircleBrightColor: Colors.white,
           flashingCircleDarkColor: Colors.blueAccent,
         ),
+        replyMessage == null
+            ? Container()
+            : Visibility(
+                visible: replyMessage != null,
+                child: Container(
+                  margin: EdgeInsets.fromLTRB(10, 5, 10, 0),
+                  width: double.infinity,
+                  child: DecoratedBox(
 
-
-        replyMessage==null? Container():
-        Visibility(
-          visible: replyMessage!=null,
-          child: Container(
-            margin: EdgeInsets.fromLTRB(10,5,10,0),
-            width: double.infinity,
-            child: DecoratedBox(
-
-              // chat bubble decoration
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(children: [
-                      Container(
-                        padding: EdgeInsets.only(left: 10),
-                        child: Text(
-                          replyMessage!.from!.name!,
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodyText1!
-                              .copyWith(
-                              color: Colors.black87,
-                              fontSize: 14,
-                              fontWeight:
-                              FontWeight.w400),
-                        ),
-                      ), 
-                      Expanded(
-                        child: Container(
-                          alignment: Alignment.topRight,
-                          padding: const EdgeInsets.all(8.0),
-                          child: InkWell(onTap: (){
-                            replyMessage = null;
-                            refreshRepliedMessage();
-                          }, child: Icon(Icons.close, size: 20,)),
-                        ),
-                      )
-                    ],),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(10, 0, 0, 10),
-                      child: (replyMessage!.imageUrl != null &&
-                          replyMessage!.imageUrl!.length > 0)
-                          ? Image.network(
-                          replyMessage!.imageUrl.toString())
-                          : Text(
-                        replyMessage!.text.toString(),
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodyText1!
-                            .copyWith(
-                            color: Colors.black87,
-                            fontSize: 12,
-                            fontWeight:
-                            FontWeight.w400),
+                      // chat bubble decoration
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                    ),
-                  ],
-                )),
-          ),
-        ),
-
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: EdgeInsets.only(left: 10),
+                                child: Text(
+                                  replyMessage!.from!.name!,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyText1!
+                                      .copyWith(
+                                          color: Colors.black87,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w400),
+                                ),
+                              ),
+                              Expanded(
+                                child: Container(
+                                  alignment: Alignment.topRight,
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: InkWell(
+                                      onTap: () {
+                                        replyMessage = null;
+                                        refreshRepliedMessage();
+                                      },
+                                      child: Icon(
+                                        Icons.close,
+                                        size: 20,
+                                      )),
+                                ),
+                              )
+                            ],
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(10, 0, 0, 10),
+                            child: (replyMessage!.imageUrl != null &&
+                                    replyMessage!.imageUrl!.length > 0)
+                                ? Image.network(
+                                    replyMessage!.imageUrl.toString())
+                                : Text(
+                                    replyMessage!.text.toString(),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyText1!
+                                        .copyWith(
+                                            color: Colors.black87,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w400),
+                                  ),
+                          ),
+                        ],
+                      )),
+                ),
+              ),
         ChatMessageTypingField(
             widget.convsController,
             widget.currentUser,
             widget.selectedUser,
             widget.socket,
             widget.convsIndex,
-            widget.typingUsersId, refreshRepliedMessage),
+            widget.typingUsersId,
+            refreshRepliedMessage),
       ],
     );
   }
@@ -507,6 +481,8 @@ class ChatBubble extends StatefulWidget {
     required this.socket,
     required this.currentUser,
     required this.refreshRepliedMessage,
+    required this.userController,
+    required this.selectedUser
   }) : super(key: key);
   final int messageIndex;
   final int convsIndex;
@@ -517,6 +493,8 @@ class ChatBubble extends StatefulWidget {
   final ConversationController convsController;
   final IO.Socket socket;
   final User currentUser;
+  final User selectedUser;
+  final UserController userController;
 
   Function() refreshRepliedMessage;
 
@@ -525,17 +503,6 @@ class ChatBubble extends StatefulWidget {
 }
 
 class _ChatBubbleState extends State<ChatBubble> {
-  Offset _tapPosition = Offset.zero;
-
-  void _getTapPosition(TapDownDetails tapPosition) {
-    final RenderBox referenceBox = context.findRenderObject() as RenderBox;
-
-    setState(() {
-      _tapPosition = referenceBox.globalToLocal(tapPosition.globalPosition);
-      print(_tapPosition);
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     Message message = widget.convsController.conversations[widget.convsIndex]
@@ -571,7 +538,7 @@ class _ChatBubbleState extends State<ChatBubble> {
           ),
           color: Colors.transparent,
           position: RelativeRect.fromRect(
-              Rect.fromLTWH(x, y-20, 100, 100),
+              Rect.fromLTWH(x, y - 20, 100, 100),
               Rect.fromLTWH(0, 0, overlay!.paintBounds.size.width,
                   overlay.paintBounds.size.height)),
           items: [
@@ -865,67 +832,76 @@ class _ChatBubbleState extends State<ChatBubble> {
                         children: <Widget>[
                           Expanded(
                               child: InkWell(
-                                onTap: (){
-                                  replyMessage = message;
-                                  // ReplyOf replyData = ReplyOf(
-                                  //     id: replyMessage!.id,
-                                  //     from: replyMessage!.from,
-                                  //     to: replyMessage!.to,
-                                  //     senderName: replyMessage!.from!.name,
-                                  //     text: replyMessage!.text, imageUrl: replyMessage!.imageUrl);
-                                  // replyMessage!.replyOf = replyData;
-
-                                  /*
-                                  Message(id: "abcd", from: widget.currentUser,
-                                      to: message.from!.id==widget.currentUser.id? message.to: message.from!.id,
-                                  "messageText",*/
-
-                                  //)
-                                  //widget.convsController.conversations[widget.convsIndex].messages!.add(replyMessage!);
-                                  //widget.convsController.conversations.refresh();
-
-                                  Navigator.pop(context);
-                                  widget.refreshRepliedMessage();
-                                },
-                                child: Column(
-                            children: [
+                            onTap: () {
+                              replyMessage = message;
+                              Navigator.pop(context);
+                              widget.refreshRepliedMessage();
+                            },
+                            child: const Column(
+                              children: [
                                 Align(
                                   alignment: Alignment.center,
-                                  child: Icon(Icons.message_rounded, size: 20,),
+                                  child: Icon(
+                                    Icons.message_rounded,
+                                    size: 20,
+                                  ),
                                 ),
                                 Text("Reply",
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
                                         fontSize: 12, color: Colors.black))
-                            ],
-                          ),
-                              )),
+                              ],
+                            ),
+                          )),
                           Expanded(
-                              child: Column(
-                            children: [
+                            child: InkWell(
+                              onTap: (){
+                                Navigator.pop(context);
+                                showMessageForwardDialog(context, widget.convsController, widget.currentUser, widget.selectedUser, widget.socket,
+                                    widget.userController, message, widget.convsIndex, setState );
+                              },
+                              child: const Column(
+                                children: [
                               Align(
                                 alignment: Alignment.center,
-                                child: Icon(Icons.forward, size: 20,),
+                                child: Icon(
+                                  Icons.forward,
+                                  size: 20,
+                                ),
                               ),
                               Text("Forward",
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
                                       fontSize: 12, color: Colors.black))
-                            ],
-                          )),
+                                ],
+                              ),
+                            ),
+                          ),
                           Expanded(
+                            child: InkWell(
+                              onTap: () async{
+                                Navigator.pop(context);
+                                await Clipboard.setData(ClipboardData(text: message.text!));
+                                 ScaffoldMessenger.of(context).showSnackBar( SnackBar(
+                                  content: Text("'${message.text.toString()}' copied!")));
+                              },
                               child: Column(
-                            children: [
+                                children: [
                               Align(
                                 alignment: Alignment.center,
-                                child: Icon(Icons.copy, size: 20,),
+                                child: Icon(
+                                  Icons.copy,
+                                  size: 20,
+                                ),
                               ),
                               Text("Copy",
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
                                       fontSize: 12, color: Colors.black))
-                            ],
-                          )),
+                                ],
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     )
@@ -933,28 +909,6 @@ class _ChatBubbleState extends State<ChatBubble> {
                 ),
               ),
             ),
-            /*  PopupMenuItem(
-                padding: EdgeInsets.symmetric(vertical: 7),
-                value: "fav",
-                child: Container(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: <Widget>[
-                    Expanded(child: Column(children: [
-                      Align(alignment: Alignment.center, child: Icon(Icons.message_rounded),),
-                      Text("Reply", textAlign: TextAlign.center,style: TextStyle(fontSize: 14,color: Colors.black))
-                    ],)),
-                    Expanded(child: Column(children: [
-                      Align(alignment: Alignment.center, child: Icon(Icons.forward),),
-                      Text("Forward", textAlign: TextAlign.center,style: TextStyle(fontSize: 14,color: Colors.black))
-                    ],)),
-                    Expanded(child: Column(children: [
-                      Align(alignment: Alignment.center, child: Icon(Icons.copy),),
-                      Text("Reply", textAlign: TextAlign.center, style: TextStyle(fontSize: 14,color: Colors.black))
-                    ],)),
-                  ],
-                  ),
-                ))*/
           ]);
       // perform action on selected menu item
       switch (result) {
@@ -967,6 +921,7 @@ class _ChatBubbleState extends State<ChatBubble> {
           break;
       }
     }
+
 
     int like = 0, love = 0, support = 0, surprised = 0, hate = 0;
     int reactCount = message.reacts!.length;
@@ -985,18 +940,14 @@ class _ChatBubbleState extends State<ChatBubble> {
       }
     }
 
-    int replyMessagebottomPadding = message.replyOf!=null?5:12;
-
     return GestureDetector(
         //onTapDown: (position) => {_getTapPosition(position)},
         onTapDown: (TapDownDetails details) => _onTapDown(details),
         onTapUp: (TapUpDetails details) => _onTapUp(details),
         onLongPress: () => {
-              //_showContextMenu(context)
               _showPopUpMenuAtPosition(x, y, widget.isCurrentUser)
             },
         onDoubleTap: () => {
-              //_showContextMenu(context)
               _showPopUpMenuAtPosition(x, y, widget.isCurrentUser)
             },
         child: Container(
@@ -1006,61 +957,60 @@ class _ChatBubbleState extends State<ChatBubble> {
           padding: EdgeInsets.fromLTRB(widget.isCurrentUser ? 64.0 : 16.0, 4,
               widget.isCurrentUser ? 16.0 : 64.0, 4),
           child: Column(
-            crossAxisAlignment: widget.isCurrentUser?CrossAxisAlignment.end: CrossAxisAlignment.start,
+            crossAxisAlignment: widget.isCurrentUser
+                ? CrossAxisAlignment.end
+                : CrossAxisAlignment.start,
             children: [
               Visibility(
-                visible: message.replyOf!=null,
-                child: message.replyOf==null?
-                Container():
-                Opacity(
-                  opacity: .8,
-                  child: Container(
-                    margin: EdgeInsets.fromLTRB(10, 0, 0, 0),
-                    padding: EdgeInsets.fromLTRB(7,7,7,14),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(15),
-                      color:  Colors.grey[200],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          padding: EdgeInsets.fromLTRB(0,5,0,5),
-                          child: Text(
-                            "Replied ${message.replyOf!.from!.name!}'s Messages",
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyText1!
-                                .copyWith(
-                                color: Color(Colors.grey[600]!.value),
-                                fontSize: 12,
-                                fontWeight:
-                                FontWeight.w400),
-
+                visible: message.replyOf != null,
+                child: message.replyOf == null
+                    ? Container()
+                    : Opacity(
+                        opacity: .8,
+                        child: Container(
+                          margin: EdgeInsets.fromLTRB(0, 0, 0, 0),
+                          padding: EdgeInsets.fromLTRB(7, 7, 7, 14),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(15),
+                            color: Colors.grey[200],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                padding: EdgeInsets.fromLTRB(0, 5, 0, 5),
+                                child: Text(
+                                  "Replied ${message.replyOf!.from!.name!}'s Messages",
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyText1!
+                                      .copyWith(
+                                          color: Color(Colors.grey[600]!.value),
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w400),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(0, 5, 0, 5),
+                                child: (message.replyOf!.imageUrl != null &&
+                                        message.replyOf!.imageUrl!.length > 0)
+                                    ? Image.network(
+                                        message.replyOf!.imageUrl.toString())
+                                    : Text(
+                                        message.replyOf!.text.toString(),
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyText1!
+                                            .copyWith(
+                                                color: Colors.grey[600],
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.w400),
+                                      ),
+                              ),
+                            ],
                           ),
                         ),
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(0, 5, 0, 5),
-                          child: (message.replyOf!.imageUrl != null &&
-                              message.replyOf!.imageUrl!.length > 0)
-                              ? Image.network(
-                              message.replyOf!.imageUrl.toString())
-                              : Text(
-                            message.replyOf!.text.toString(),
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyText1!
-                                .copyWith(
-                                color: Colors.grey[600],
-                                fontSize: 16,
-                                fontWeight:
-                                FontWeight.w400),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+                      ),
               ),
               IntrinsicWidth(
                 stepWidth: 0,
@@ -1070,59 +1020,73 @@ class _ChatBubbleState extends State<ChatBubble> {
                   children: [
                     Padding(
                       padding: EdgeInsets.fromLTRB(
-                          widget.isCurrentUser ? 5 : 10, 0, 0, 0),
+                          widget.isCurrentUser ? 5 : 0, 0, 0, 0),
                       child: Column(
-                        crossAxisAlignment: widget.isCurrentUser? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                        crossAxisAlignment: widget.isCurrentUser
+                            ? CrossAxisAlignment.end
+                            : CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
-
-                        Transform.translate(
-                          offset: const Offset(0, -10),
-                          child: Row(
-                            mainAxisAlignment: widget.isCurrentUser? MainAxisAlignment.end : MainAxisAlignment.start,
-
-                            children: [
-                              DecoratedBox(
-                                // chat bubble decoration
-                                  decoration: BoxDecoration(
-                                    color: widget.isCurrentUser
-                                        ? Colors.blue[700]
-                                        : Colors.grey[300],
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment: widget.isCurrentUser? CrossAxisAlignment.end : CrossAxisAlignment.start,
-                                    children: [
-                                      Align(
-                                        alignment: Alignment.centerLeft,
-                                        child: Padding(
-                                          padding: EdgeInsets.fromLTRB(12,(message.replyOf!=null)? 7:12, 12,12),
-                                          child: (message.imageUrl != null &&
-                                              message.imageUrl!.length > 0)
-                                              ? Image.network(
-                                              message.imageUrl.toString())
-                                              : Text(
-                                            message.text.toString(),
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .bodyText1!
-                                                .copyWith(
-                                                color: widget.isCurrentUser
-                                                    ? Colors.white
-                                                    : Colors.black87,
-                                                fontSize: 16,
-                                                fontWeight:
-                                                FontWeight.normal),
+                          Transform.translate(
+                            offset: const Offset(0, -10),
+                            child: Row(
+                              mainAxisAlignment: widget.isCurrentUser
+                                  ? MainAxisAlignment.end
+                                  : MainAxisAlignment.start,
+                              children: [
+                                DecoratedBox(
+                                    // chat bubble decoration
+                                    decoration: BoxDecoration(
+                                      color: widget.isCurrentUser
+                                          ? Colors.blue[700]
+                                          : Colors.grey[300],
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: widget.isCurrentUser
+                                          ? CrossAxisAlignment.end
+                                          : CrossAxisAlignment.start,
+                                      children: [
+                                        Align(
+                                          alignment: Alignment.centerLeft,
+                                          child: Padding(
+                                            padding: EdgeInsets.fromLTRB(
+                                                12,
+                                                (message.replyOf != null)
+                                                    ? 7
+                                                    : 12,
+                                                12,
+                                                12),
+                                            child: (message.imageUrl != null &&
+                                                    message.imageUrl!.length >
+                                                        0)
+                                                ? Image.network(
+                                                    message.imageUrl.toString())
+                                                : Text(
+                                                    message.text.toString(),
+                                                    style: Theme.of(context)
+                                                        .textTheme
+                                                        .bodyText1!
+                                                        .copyWith(
+                                                            color: widget
+                                                                    .isCurrentUser
+                                                                ? Colors.white
+                                                                : Colors
+                                                                    .black87,
+                                                            fontSize: 16,
+                                                            fontWeight:
+                                                                FontWeight
+                                                                    .normal),
+                                                  ),
                                           ),
                                         ),
-                                      ),
-
-                                    ],
-                                  ))
-                            ],
+                                      ],
+                                    ))
+                              ],
+                            ),
                           ),
-                        ),
-                      ],),
+                        ],
+                      ),
                     ),
                     Positioned(
                         bottom: 0,
@@ -1218,12 +1182,15 @@ class _ChatBubbleState extends State<ChatBubble> {
                               visible: reactCount > 0,
                               child: Container(
                                 margin: EdgeInsets.only(right: 1),
-                                decoration:
-                                    BoxDecoration(shape: BoxShape.circle,
-                                    color: Colors.white,),
-                                 padding: EdgeInsets.all(5),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.white,
+                                ),
+                                padding: EdgeInsets.all(5),
                                 child: ClipOval(
-                                  child: Text(reactCount.toString(), ),
+                                  child: Text(
+                                    reactCount.toString(),
+                                  ),
                                 ),
                               ),
                             ),
@@ -1244,16 +1211,13 @@ class _ChatBubbleState extends State<ChatBubble> {
                           : "Unseen"),
                 ),
               ),
-
-
-
             ],
           ),
         ));
   }
 }
 
- sendMessage (
+sendMessage(
     ConversationController convsController,
     User currentUser,
     String selectedUserId,
@@ -1261,9 +1225,8 @@ class _ChatBubbleState extends State<ChatBubble> {
     String imageUrl,
     IO.Socket socket,
     int convsIndex,
-     Function() refreshRepliedMessage,
-     BuildContext context) async {
-
+    Function()? refreshRepliedMessage,
+    BuildContext context) async {
   List<String> seenBy = <String>[];
   seenBy.add(currentUser.id.toString());
 
@@ -1273,15 +1236,17 @@ class _ChatBubbleState extends State<ChatBubble> {
 
   ReplyOf? replyData;
 
-  replyMessage!=null?{
-  replyData = ReplyOf(
-  id: replyMessage!.id,
-  from: replyMessage!.from,
-  to: replyMessage!.to,
-  senderName: replyMessage!.from!.name,
-  text: replyMessage!.text, imageUrl: replyMessage!.imageUrl)
-  }: {};
-
+  replyMessage != null
+      ? {
+          replyData = ReplyOf(
+              id: replyMessage!.id,
+              from: replyMessage!.from,
+              to: replyMessage!.to,
+              senderName: replyMessage!.from!.name,
+              text: replyMessage!.text,
+              imageUrl: replyMessage!.imageUrl)
+        }
+      : {};
 
   Message message = Message(
       id: "",
@@ -1294,12 +1259,14 @@ class _ChatBubbleState extends State<ChatBubble> {
       reacts: reacts,
       replyOf: replyData);
 
-  await convsController.sendMessage(convsController.conversations[convsIndex].id!,
-      convsController.conversations[convsIndex].type!, message, convsIndex);
-
+  await convsController.sendMessage(
+      convsController.conversations[convsIndex].id!,
+      convsController.conversations[convsIndex].type!,
+      message,
+      convsIndex);
 
   replyMessage = null;
-  refreshRepliedMessage();
+  refreshRepliedMessage!=null? refreshRepliedMessage():{};
 }
 
 class ChatMessageTypingField extends StatefulWidget {
@@ -1311,10 +1278,14 @@ class ChatMessageTypingField extends StatefulWidget {
 
   Function() refreshRepliedMessage;
 
-
-
-  ChatMessageTypingField(this.convsController, this.currentUser,
-      this.selectedUser, this.socket, this.convsIndex, this.typingUsersId, this.refreshRepliedMessage,
+  ChatMessageTypingField(
+      this.convsController,
+      this.currentUser,
+      this.selectedUser,
+      this.socket,
+      this.convsIndex,
+      this.typingUsersId,
+      this.refreshRepliedMessage,
       {Key? key})
       : super(key: key);
 
@@ -1323,17 +1294,14 @@ class ChatMessageTypingField extends StatefulWidget {
 }
 
 class _ChatMessageTypingFieldState extends State<ChatMessageTypingField> {
-
   TextEditingController messageController = new TextEditingController();
   bool emojiShowing = false;
-
 
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       child: Column(
         children: [
-
           Container(
             margin: EdgeInsets.all(15.0),
             height: 61,
@@ -1441,7 +1409,8 @@ class _ChatMessageTypingFieldState extends State<ChatMessageTypingField> {
                                 messageController,
                                 "",
                                 widget.socket,
-                                widget.convsIndex, widget.refreshRepliedMessage);
+                                widget.convsIndex,
+                                widget.refreshRepliedMessage);
                           },
                         ),
                         IconButton(
@@ -1472,9 +1441,10 @@ class _ChatMessageTypingFieldState extends State<ChatMessageTypingField> {
                             messageController.text,
                             "",
                             widget.socket,
-                            widget.convsIndex, widget.refreshRepliedMessage, context);
+                            widget.convsIndex,
+                            widget.refreshRepliedMessage,
+                            context);
                         messageController.text = "";
-
 
                         if (widget.typingUsersId
                             .contains(widget.currentUser.id)) {
@@ -1558,7 +1528,8 @@ class _ChatMessageTypingFieldState extends State<ChatMessageTypingField> {
       TextEditingController messageController,
       imageUrl,
       IO.Socket socket,
-      int convsIndex, Function() refreshRepliedMessage) async {
+      int convsIndex,
+      Function() refreshRepliedMessage) async {
     file = await ImagePicker()
         .pickImage(source: ImageSource.gallery); //pick an image
     //upload file...
@@ -1573,14 +1544,181 @@ class _ChatMessageTypingFieldState extends State<ChatMessageTypingField> {
       var response = await dio.post(
           "https://nodejsrealtimechat.onrender.com/upload",
           data: {"image": base64Image, "name": filename});
-      await sendMessage(convsController, currentUser, selectedUserId,
-          messageController.text, response.data['url'], socket, convsIndex, refreshRepliedMessage, context);
+      await sendMessage(
+          convsController,
+          currentUser,
+          selectedUserId,
+          messageController.text,
+          response.data['url'],
+          socket,
+          convsIndex,
+          refreshRepliedMessage,
+          context);
     } catch (e) {
       print(e.toString());
-    } 
+    }
   }
 }
 
-abstract class OnMessageSend {
-  void onMessageSend();
+
+
+
+
+void showMessageForwardDialog (
+    BuildContext context,
+    ConversationController convsController,
+    User currentUser,
+    User selectedUser,
+    IO.Socket socket,
+    UserController userController,
+    Message message,
+    int convsIndex, 
+    setState
+    ) {
+
+  userController.getUsersDataExceptOne(currentUser.name, currentUser.email);
+
+
+    showGeneralDialog(
+    context: context,
+    barrierLabel: "Barrier",
+    barrierDismissible: true,
+    barrierColor: Colors.black.withOpacity(0.5),
+    transitionDuration: Duration(milliseconds: 500),
+    pageBuilder: (_, __, ___) {
+
+      return Center(
+        child: Container(
+         // height: 300,
+          margin: EdgeInsets.fromLTRB( 20,70,20,40),
+          padding: EdgeInsets.symmetric(horizontal: 20),
+          decoration: BoxDecoration(
+              color: Colors.white, borderRadius: BorderRadius.circular(20)),
+          child: Column(
+            children: [
+              Container(
+                alignment: Alignment.topCenter ,
+                margin: EdgeInsets.fromLTRB(5, 35, 5, 5),
+                child: Text(
+                  "Message Forward to",
+                  style: TextStyle(fontSize: 16, color: Colors.black),
+                ),
+              ),
+
+              Expanded(
+                child: GetX<UserController>(
+                  builder: (controller) {
+
+
+                    return ListView.builder(
+                      itemCount: userController.users.length,
+                      itemBuilder: (context, index) {
+                        return Card(
+                          child: Container(
+                            margin: EdgeInsets.fromLTRB(5, 5, 5, 5),
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  backgroundImage: AssetImage('assets/conversation.png'),
+                                ),
+                                Container(
+                                  margin: EdgeInsets.fromLTRB(5, 0, 0, 0),
+                                  child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: <Widget>[
+                                        Text(
+                                          "${userController.users[index].name}",
+                                          style: TextStyle(fontSize: 15, color: Colors.black),
+                                        ),
+                                        SizedBox(
+                                          height: 5,
+                                        ),
+                                        Text(
+                                          "${userController.users[index].email}",
+                                          style: TextStyle(fontSize: 10, color: Colors.black87),
+                                        )
+                                      ]),
+                                ),
+
+                                Expanded(
+
+                                  child: Align(
+                                    alignment: Alignment.centerRight,
+                                    child: AsyncButtonBuilder(
+                                      showError: false,
+                                      showSuccess: true,
+                                      child: Text('Send'),
+                                        onPressed: () async {
+
+                                        await Future.delayed(Duration(seconds: 1));
+ 
+                                        print("Message forward Called!");
+
+                                        Message messageToBeForward = new Message(from: currentUser,to: controller.users[index].id!,text: message.text,
+                                            seenBy: [currentUser.id!], receivedBy: [currentUser.id!], imageUrl: message.imageUrl, reacts: []);
+
+                                        forwardMessage(context, socket, userController, convsController, currentUser, controller.users[index],
+                                            "${currentUser.name!}-${controller.users[index].name!}", "Single", messageToBeForward,
+                                            convsController.conversations[convsIndex].id!,  convsController.conversations[convsIndex].type!);
+                                        userController.users.removeAt(index);
+                                        userController.users.refresh();
+                                        setState();
+                                      },
+                                      builder: (context, child, callback, _) {
+                                        return TextButton(
+                                          child: child,
+                                          onPressed: callback,
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ),
+
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+    transitionBuilder: (_, anim, __, child) {
+      Tween<Offset> tween;
+      if (anim.status == AnimationStatus.reverse) {
+        tween = Tween(begin: Offset(-1, 0), end: Offset.zero);
+      } else {
+        tween = Tween(begin: Offset(1, 0), end: Offset.zero);
+      }
+
+      return SlideTransition(
+        position: tween.animate(anim),
+        child: FadeTransition(
+          opacity: anim,
+          child: child,
+        ),
+      );
+    },
+  );
+
+
 }
+
+void forwardMessage(
+    BuildContext context,
+    IO.Socket socket,
+    UserController userController,
+    ConversationController convsController,
+    User currentUser, User selectedUser,
+    String title,
+    String type,
+    Message message,
+    String convsId, String convsType) {
+  convsController.sendFirstMessage(context, socket, userController, convsController, currentUser, selectedUser, title, type, message, convsId, convsType);
+}
+

@@ -33,15 +33,13 @@ class UserListPage extends StatefulWidget {
 
 class _UserListPageState extends State<UserListPage> {
 
-  @override
-  void initState() {
-    // TODO: implement initState
-    super.initState();
-    widget.userController.getUsersDataExceptOne(
-        widget.currentUser.name, widget.currentUser.email);
-  }
+
   @override
   Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+      widget.userController.getUsersDataExceptOne(
+          widget.currentUser.name, widget.currentUser.email);
+    });
 
 
     return Scaffold(

@@ -7,6 +7,7 @@ import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:socket_io_client/socket_io_client.dart';
 import '../model/Message.dart';
 import '../model/User.dart';
+import '../utils/Constant.dart';
 
 IO.Socket? socket;
 
@@ -76,7 +77,8 @@ connectToSocket() {
     return socket;
   }else {
     socket = io(
-        'https://nodejsrealtimechat.onrender.com/',
+        //'https://nodejsrealtimechat.onrender.com/',
+        chatUrl,
         OptionBuilder()
             .setTransports(['websocket']) // for Flutter or Dart VM
             .disableAutoConnect() // disable auto-connection
@@ -99,7 +101,8 @@ sendMessage(String convsId, String convsType,  Message message, int conversation
   };
   var response = await dio.post(
     // "http://172.28.240.1:3000/conversation/sendMessage?convsId=" + convsId,
-    "https://nodejsrealtimechat.onrender.com/conversation/sendMessage?convsId=" + convsId,
+    //"https://nodejsrealtimechat.onrender.com/conversation/sendMessage?convsId=" + convsId,
+    chatUrl+"/conversation/sendMessage?convsId=" + convsId,
     data: jsonEncode(<String, dynamic>{
       '_id': message.id,
       "from": message.from,

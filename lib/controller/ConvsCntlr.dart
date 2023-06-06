@@ -7,6 +7,7 @@ import 'package:realtime_chat/controller/userController.dart';
 import 'package:realtime_chat/model/Conversation.dart';
 import 'package:realtime_chat/model/Message.dart';
 import 'package:realtime_chat/model/User.dart';
+import 'package:realtime_chat/utils/Constant.dart';
 import 'package:realtime_chat/view/create_group.dart';
 import 'package:realtime_chat/view/group_chat_widget.dart';
 import 'package:realtime_chat/view/p_to_p_chat_page.dart';
@@ -76,6 +77,69 @@ class ConversationController extends GetxController implements SocketListeners{
     }
   }
 
+  sendFirstMessage(
+      BuildContext context,
+      IO.Socket socket,
+      UserController userController,
+      ConversationController convsController,
+      User currentUser, User selectedUser,
+      String title,
+      String type,
+      Message message, String convsId, String convsType) async {
+
+    var header = {
+      'Content-type': 'application/json; charset=utf-8',
+      'Accept': 'application/json'
+    };
+
+    List<User> users = [currentUser, selectedUser];
+
+    var response = await dio.post(
+      //'https://nodejsrealtimechat.onrender.com/conversation/firstMessage',
+      chatUrl+"/conversation/firstMessage",
+      // 'http://172.28.240.1:3000/conversation/add',
+      data: jsonEncode(<String, dynamic>{
+        "title": title,
+        "type": type,
+        "users": users,
+        "message": message,
+      }),
+      options: Options(headers: header),
+    );
+    Message messageData = Message.fromJson(response.data);
+
+    if (response.statusCode == 200) {
+
+      print("First Message Successfully Sent!");
+
+      var result = response.data;
+      Conversation conversation = Conversation.fromJson(result);
+      conversations.add(conversation);
+      print("Conversations: ${result.length}");
+      conversations.refresh();
+
+      var json = {
+        "_id": messageData.id,
+        "from": messageData.from,
+        "to": messageData.to,
+        "convsId": convsId,
+        "convsType": convsType,
+        "text": messageData.text,
+        "seenBy": messageData.seenBy,
+        "receivedBy": messageData.receivedBy,
+        'imageUrl': messageData.imageUrl,
+        'reacts': messageData.reacts,
+        'replyOf': messageData.replyOf,
+        'createdAt': messageData.createdAt,
+        'updatedAt': messageData.updatedAt,
+      };
+
+
+      socket.emit('sendMessage', json);
+      print("Message Send Successfully!");
+    }
+  }
+
   createGroupConversation(
       BuildContext context,
       IO.Socket socket,
@@ -93,7 +157,8 @@ class ConversationController extends GetxController implements SocketListeners{
       'Accept': 'application/json'
     };
     var response = await dio.post(
-      'https://nodejsrealtimechat.onrender.com/conversation/add',
+      //'https://nodejsrealtimechat.onrender.com/conversation/add',
+        chatUrl+"/conversation/add",
       // 'http://172.28.240.1:3000/conversation/add',
       data: jsonEncode(<String, dynamic>{
         "title": title,
@@ -134,7 +199,7 @@ class ConversationController extends GetxController implements SocketListeners{
       'Accept': 'application/json'
     };
       var response = await dio.post(
-        "https://nodejsrealtimechat.onrender.com/conversation/reactMessage?convsId=" + convsId,
+        "$chatUrl/conversation/reactMessage?convsId=$convsId",
         data: jsonEncode(<String, dynamic>{
           'messageId': messageId,
           "reactTitle": reactTitle,
@@ -159,8 +224,7 @@ class ConversationController extends GetxController implements SocketListeners{
     };
 
     var response = await dio.post(
-      "https://nodejsrealtimechat.onrender.com/conversation/receivedMessage?convsId=" + convsId,
-      // "http://172.28.240.1:3000/conversation/seenMessage?convsId=" + convsId,
+        chatUrl+"/conversation/receivedMessage?convsId=" + convsId,
       data: jsonEncode(<String, dynamic>{
         'messageId': messageId,
         "currentUserId": currentUserId,
@@ -169,17 +233,25 @@ class ConversationController extends GetxController implements SocketListeners{
     );
     if (response.statusCode == 200) {
       socketController.notifyMessageReceived(convsId, convsType, currentUserId);
+
+      print("seenMessage requested to called");
+      pToP_ChatPage.seenMessage(this, convsId, convsType, messageId, socket, currentUserId);
     }
   }
 
   seenMessage(String convsId, String convsType, String messageId, IO.Socket socket, String currentUserId) async {
+
+    print("seenMessage called");
+    print(messageId);
+    print(convsId);
+    print(currentUserId);
     var header = {
       'Content-type': 'application/json; charset=utf-8',
       'Accept': 'application/json'
     };
 
     var response = await dio.post(
-      "https://nodejsrealtimechat.onrender.com/conversation/seenMessage?convsId=" + convsId,
+      "$chatUrl/conversation/seenMessage?convsId=$convsId",
      // "http://172.28.240.1:3000/conversation/seenMessage?convsId=" + convsId,
       data: jsonEncode(<String, dynamic>{
         'messageId': messageId,
@@ -188,20 +260,21 @@ class ConversationController extends GetxController implements SocketListeners{
       options: Options(headers: header),
     );
     if (response.statusCode == 200) {
+      print("MessageSeenUpdated");
       socketController.notifyMessageSeen(convsId, convsType, currentUserId);
+    }else{
+      print("Something went wrong");
     }
   }
 
-
   void getConversationByUserId(String userId) async {
-
 
     var header = {
       'Content-type': 'application/json; charset=utf-8',
       'Accept': 'application/json'
     };
     var response = await dio.get(
-      "https://nodejsrealtimechat.onrender.com/conversation/get?userId=${userId}",
+      chatUrl+"/conversation/get?userId=${userId}",
       options: Options(headers: header),
     );
     if (response.statusCode == 200) {
@@ -218,9 +291,6 @@ class ConversationController extends GetxController implements SocketListeners{
       conversations.refresh();
     }
   }
-
-
-
 
   @override
   void onMessageReceived(IO.Socket socket, data) {
@@ -288,30 +358,37 @@ class ConversationController extends GetxController implements SocketListeners{
     User user = User.fromJson(jsonMap['from']);
 
     if (user.id!=  currentUser.id!) {
-      var receivedByList = jsonMap['receivedBy'].toList();
-      var reactList = jsonMap['reacts'].toList();
-      List<String> seenBy = <String>[];
-      List<String> receivedBy = <String>[];
-      List<React> reacts = <React>[];
 
+
+      var receivedByList = jsonMap['receivedBy'].toList();
+      List<String> receivedBy = <String>[];
       for (var i = 0; i < receivedByList.length; i++) {
         //Convert And Reasign Existing SeenBy Data...
         receivedBy.add(receivedByList[i]);
       }
 
-      for (var i = 0; i < reacts.length; i++) {
+      var reactList = jsonMap['reacts'].toList();
+      List<React> reacts = <React>[];
+      for (var i = 0; i < reactList.length; i++) {
         //Convert And Reasign Existing SeenBy Data...
-        reacts.add(reacts[i]);
+        reacts.add(reactList[i]);
+      }
+
+      var seenByList = jsonMap['seenBy'].toList();
+      List<String> seenBy = <String>[];
+      for (var i = 0; i < seenByList.length; i++) {
+        //Convert And Reasign Existing SeenBy Data...
+        seenBy.add(seenByList[i]);
       }
 
       int convsIndex = 0;
       for (int i = 0; i < conversations.length; i++) {
-        if (conversations[i].id ==
-            jsonMap['convsId']) {
+        if (conversations[i].id == jsonMap['convsId']) {
           convsIndex = i;
           break;
         }
       }
+
 
       Message message = Message(
           id: jsonMap['id'],
@@ -334,6 +411,7 @@ class ConversationController extends GetxController implements SocketListeners{
             jsonMap['convsId'], jsonMap['convsType'], jsonMap['id'],
             socket,currentUser.id!);
         conversations.refresh();
+
       }
     }
   }

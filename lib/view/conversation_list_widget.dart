@@ -51,23 +51,15 @@ class _ConversationListWidgetState extends State<ConversationListWidget> {
 
     super.dispose();
   }
-
   bool openMessage = false;
 
   @override
   Widget build(BuildContext context) {
 
-
-
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
-
       widget.convsController.getConversationByUserId(widget.currentUser.id!);
 
       widget.socket.on("leaveUser", (leaveUserChatId) {
-        print("leaveUserChatId: " + leaveUserChatId);
-
-        //getConvsIndex(widget.convsController.conversations, currentUserId)
-
         for (int i = 0; i < widget.convsController.conversations.length; i++) {
           for (int j = 0; j < widget.convsController.conversations[i].users!.length; j++) {
             if (widget.convsController.conversations[i].users![j].chatId == leaveUserChatId) { // if leave user, then update status to Offline
@@ -93,18 +85,11 @@ class _ConversationListWidgetState extends State<ConversationListWidget> {
         widget.convsController.conversations.refresh();
       });
 
-
-
       setUpPersonToPersonMessagingRealTimeListeners();
       setUpGroupMessagingRealTimeListeners();
-
-
     });
 
     TextEditingController searchContactController = TextEditingController();
-
-
-
     return Scaffold(
       appBar: AppBar(
       backgroundColor: Colors.white,
@@ -309,14 +294,6 @@ class _ConversationListWidgetState extends State<ConversationListWidget> {
     String notifyMessageSendEvent = "notifyMessageSend?convsType=Single";
     widget.socket.on(notifyMessageSendEvent, (data) {
       widget.convsController.onMessageSend(widget.socket, data, widget.currentUser);
-      pToP_ChatPage(widget.convsController, widget.currentUser,
-          widget.currentUser, widget.socket, 0,widget.userController) //Fake Data
-          .onMessageSend();
-    });
-
-    String notifyNewReactAddedEvent = "notifyNewReactAdded?convsType=Single";
-    widget.socket.on(notifyNewReactAddedEvent, (data) {
-      widget.convsController.onNewReactAdded(widget.socket, data);
     });
 }
 
@@ -465,11 +442,12 @@ class _ConversationItemWidgetState extends State<ConversationItemWidget> {
   Widget build(BuildContext context) {
 
     var otherUserActiveStatus =
-    widget.conversation.users![0].id == widget.currentUser.id
-        ? widget.conversation.users![1].status
-        : widget.conversation.users![0].status;
+    widget.conversation.users?[0].id == widget.currentUser.id
+        ? widget.conversation.users![1].status ?? "Online"
+        : widget.conversation.users![0].status ?? "Offline" ;
 
 
+    //solution for null exception : var len = string?.length ?? 0;
 
 
     Message message = widget.conversation
@@ -511,7 +489,7 @@ class _ConversationItemWidgetState extends State<ConversationItemWidget> {
 
                     builder: (context) => widget.conversation.type == "Group"
                         ? GroupChatWidget(widget.convsController,
-                        widget.currentUser, widget.socket, widget.index)
+                        widget.currentUser, widget.socket, widget.index, widget.userController)
                         : pToP_ChatPage(
                         widget.convsController,
                         widget.currentUser,
@@ -550,7 +528,13 @@ class _ConversationItemWidgetState extends State<ConversationItemWidget> {
                       Align(
                         alignment: Alignment.topLeft,
                         child: Text(
-                          "${widget.conversation.title}",
+                          "${
+                              widget.conversation.type == "Single" ?
+                          widget.conversation.users![0].id! == widget.currentUser.id
+                              ? widget.conversation.users![1].name
+                              : widget.conversation.users![0].name
+
+                          :widget.conversation.title}",
                           style: const TextStyle(
                             fontSize: 18,
                             color: Colors.black,

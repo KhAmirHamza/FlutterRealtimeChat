@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:realtime_chat/controller/ConvsCntlr.dart';
+import 'package:realtime_chat/controller/userController.dart';
 import 'package:realtime_chat/model/Message.dart';
 import 'package:realtime_chat/model/User.dart';
 import 'package:get/get_connect/http/src/multipart/form_data.dart';
@@ -20,17 +21,19 @@ import 'package:dio/src/multipart_file.dart' as MultipartFile;
 import 'package:http/http.dart' as http;
 
 import '../model/Conversation.dart';
+import 'home_page.dart';
 
 class GroupChatWidget extends StatefulWidget {
   // Completely Done for now
   ConversationController convsController;
+  UserController userController;
   User currentUser;
   int convsIndex;
   final dio = Dio();
   IO.Socket socket;
 
   GroupChatWidget(
-      this.convsController, this.currentUser, this.socket, this.convsIndex,
+      this.convsController, this.currentUser, this.socket, this.convsIndex, this.userController,
       {super.key});
 
   @override
@@ -48,7 +51,17 @@ class _GroupChatWidgetState extends State<GroupChatWidget> {
             elevation: 1,
             leading: BackButton(
               color: Colors.black,
-            onPressed: ()=> Navigator.of(context, rootNavigator: true).pop(),
+            onPressed: ()=> {
+
+              Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => HomePage(
+                      widget.userController,
+                      widget.currentUser,
+                      widget.socket,
+                      widget.convsController)))
+            },
           ),
             backgroundColor:Colors.white,
               title: Container( margin: EdgeInsets.only(bottom: 5),
@@ -124,24 +137,12 @@ class _GroupMessageListWidgetState extends State<GroupMessageListWidget> {
                 }
                 }
 
-                //widget.convsController.conversations[widget.convsIndex].users!.map((e) => e.id==item.fromId? sender = e : {});
-                //list2 = list.where((map)=>map["tags"].contains(tag)).toList();
-
                 bool hasSeen = true;
-                /*if (item.seenBy!.contains(widget.selectedUser.id)) {
-                  hasSeen = true;
-                }*/
-
-                print("SeenByNow1: " + item.seenBy.toString());
-
-                int position =
-                getLastSendMessageIndex(widget.currentUser.id!, items);
-
+                int position = getLastSendMessageIndex(widget.currentUser.id!, items);
                 bool isLastSendMessage = reversedIndex == position;
-
                 String createdAtDate =  item.createdAt!.toString().substring(0, 10);
-
                 bool hasMessagesAtSameDay = false;
+
                 if(reversedIndex>0){
                   String createdAtPreviousDate =  items[reversedIndex-1].createdAt!.substring(0, 10);
                   if(createdAtPreviousDate==createdAtDate) hasMessagesAtSameDay = true;
@@ -210,16 +211,7 @@ class ChatBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
-
     Message message = item;
-
-    // String seenUsersListText = "";
-    // for(int i=0; i<message.seenBy!.length; i++){
-    //   seenUsersListText+=message.seenBy![i]
-    // }
-
-
     return Padding(
       // add some padding
       padding: EdgeInsets.fromLTRB(isCurrentUser ? 64.0 : 0, 4,isCurrentUser ? 16.0 : 64.0,4,),
@@ -307,36 +299,6 @@ class ChatBubble extends StatelessWidget {
     );
   }
 }
-
-/*class SendMessageButton extends StatelessWidget {
-  TextEditingController messageController;
-  ConversationController convsController;
-  String currentUserId;
-  User selectedUser;
-  IO.Socket socket;
-  String imageUrl;
-
-  SendMessageButton(this.convsController, this.messageController,
-      this.currentUserId, this.selectedUser, this.socket, this.imageUrl,
-      {super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      child: Container(
-        margin: EdgeInsets.all(5),
-        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        child: Text(
-          "Send",
-          style: TextStyle(fontSize: 25),
-        ),
-      ),
-      onTap: () => {
-
-      },
-    );
-  }
-}*/
 
 sendMessage(
     ConversationController convsController,

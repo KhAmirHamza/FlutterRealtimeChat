@@ -47,6 +47,8 @@ dependencies:
   flutter_smart_dialog: ^4.9.0+6
   lottie: ^2.3.2
   flutter_gif: ^0.0.4
+  any_animated_button: ^0.0.4
+  async_button_builder: ^3.0.0+1
 
 
 
